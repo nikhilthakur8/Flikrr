@@ -28,13 +28,16 @@ async function getICEServers() {
 	return new Promise((resolve, reject) => {
 		// Check if we have cached servers that are still valid
 		const now = Date.now();
-		if (iceServers && (now - iceServersLastFetch) < ICE_SERVERS_CACHE_DURATION) {
+		if (
+			iceServers &&
+			now - iceServersLastFetch < ICE_SERVERS_CACHE_DURATION
+		) {
 			resolve(iceServers);
 			return;
 		}
 
 		let o = {
-			format: "urls"
+			format: "urls",
 		};
 
 		let bodyString = JSON.stringify(o);
@@ -43,27 +46,35 @@ async function getICEServers() {
 			path: "/_turn/MyFirstApp",
 			method: "PUT",
 			headers: {
-				"Authorization": "Basic " + Buffer.from("nikhilthakur8012004:89192ace-7e08-11f0-82fc-0242ac140002").toString("base64"),
+				Authorization:
+					"Basic " +
+					Buffer.from(
+						"nikhilthakur8012004:89192ace-7e08-11f0-82fc-0242ac140002"
+					).toString("base64"),
 				"Content-Type": "application/json",
-				"Content-Length": bodyString.length
-			}
+				"Content-Length": bodyString.length,
+			},
 		};
 
-		let httpreq = https.request(options, function(httpres) {
+		let httpreq = https.request(options, function (httpres) {
 			let str = "";
-			httpres.on("data", function(data) { 
-				str += data; 
+			httpres.on("data", function (data) {
+				str += data;
 			});
-			httpres.on("error", function(e) { 
+			httpres.on("error", function (e) {
 				console.log("HTTP response error: ", e);
 				reject(e);
 			});
-			httpres.on("end", function() { 
+			httpres.on("end", function () {
 				try {
 					const response = JSON.parse(str);
 					console.log("ICE Servers Response: ", response);
-					
-					if (response.s === "ok" && response.v && response.v.iceServers) {
+
+					if (
+						response.s === "ok" &&
+						response.v &&
+						response.v.iceServers
+					) {
 						iceServers = response.v.iceServers;
 						iceServersLastFetch = now;
 						resolve(iceServers);
@@ -72,17 +83,20 @@ async function getICEServers() {
 						console.log("Using fallback STUN servers");
 						iceServers = [
 							{ urls: "stun:stun.l.google.com:19302" },
-							{ urls: "stun:stun1.l.google.com:19302" }
+							{ urls: "stun:stun1.l.google.com:19302" },
 						];
 						iceServersLastFetch = now;
 						resolve(iceServers);
 					}
 				} catch (parseError) {
-					console.log("Error parsing ICE servers response: ", parseError);
+					console.log(
+						"Error parsing ICE servers response: ",
+						parseError
+					);
 					// Fallback to public STUN servers
 					iceServers = [
 						{ urls: "stun:stun.l.google.com:19302" },
-						{ urls: "stun:stun1.l.google.com:19302" }
+						{ urls: "stun:stun1.l.google.com:19302" },
 					];
 					iceServersLastFetch = now;
 					resolve(iceServers);
@@ -90,12 +104,12 @@ async function getICEServers() {
 			});
 		});
 
-		httpreq.on("error", function(e) { 
+		httpreq.on("error", function (e) {
 			console.log("Request error: ", e);
 			// Fallback to public STUN servers
 			iceServers = [
 				{ urls: "stun:stun.l.google.com:19302" },
-				{ urls: "stun:stun1.l.google.com:19302" }
+				{ urls: "stun:stun1.l.google.com:19302" },
 			];
 			iceServersLastFetch = now;
 			resolve(iceServers);
@@ -113,15 +127,32 @@ app.get("/", (req, res) => {
 // API endpoint to get ICE servers
 app.get("/ice-servers", async (req, res) => {
 	try {
-		const servers = await getICEServers();
-		res.json({ iceServers: servers });
+		const serverData = await getICEServers(); // returns your Xirsys object
+
+		// Transform into array format for PeerJS
+		const iceServers = [
+			// Always include a fallback STUN
+			{ urls: "stun:stun.l.google.com:19302" },
+			{ urls: "stun:stun1.l.google.com:19302" },
+		];
+
+		if (serverData && serverData.iceServers) {
+			iceServers.push({
+				urls: serverData.iceServers.urls, // array of TURN/STUN URLs from Xirsys
+				username: serverData.iceServers.username,
+				credential: serverData.iceServers.credential,
+			});
+		}
+
+		res.json({ iceServers });
 	} catch (error) {
 		console.error("Error getting ICE servers:", error);
-		res.json({ 
+		// fallback if Xirsys fails
+		res.json({
 			iceServers: [
 				{ urls: "stun:stun.l.google.com:19302" },
-				{ urls: "stun:stun1.l.google.com:19302" }
-			] 
+				{ urls: "stun:stun1.l.google.com:19302" },
+			],
 		});
 	}
 });
@@ -140,11 +171,11 @@ io.on("connection", (socket) => {
 			socket.emit("iceServers", { iceServers: servers });
 		} catch (error) {
 			console.error("Error getting ICE servers for socket:", error);
-			socket.emit("iceServers", { 
+			socket.emit("iceServers", {
 				iceServers: [
 					{ urls: "stun:stun.l.google.com:19302" },
-					{ urls: "stun:stun1.l.google.com:19302" }
-				] 
+					{ urls: "stun:stun1.l.google.com:19302" },
+				],
 			});
 		}
 	});
@@ -268,11 +299,13 @@ function disconnectUser(socketId) {
 
 server.listen(3001, () => {
 	console.log("WebRTC Server is running on port 3001");
-	
+
 	// Initialize ICE servers on startup
-	getICEServers().then((servers) => {
-		console.log("ICE servers initialized:", servers);
-	}).catch((error) => {
-		console.log("Failed to initialize ICE servers:", error);
-	});
+	getICEServers()
+		.then((servers) => {
+			console.log("ICE servers initialized:", servers);
+		})
+		.catch((error) => {
+			console.log("Failed to initialize ICE servers:", error);
+		});
 });

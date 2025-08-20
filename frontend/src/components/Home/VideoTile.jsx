@@ -4,7 +4,16 @@ export const VideoTile = ({ videoRef, containerClassName, ...props }) => {
 	const localRef = useRef(null);
 
 	useEffect(() => {
-		if (videoRef) localRef.current.srcObject = videoRef;
+		if (videoRef && localRef.current) {
+			localRef.current.srcObject = videoRef;
+
+			const playPromise = localRef.current.play();
+			if (playPromise !== undefined) {
+				playPromise.catch((err) => {
+					console.warn("Video autoplay failed:", err);
+				});
+			}
+		}
 	}, [videoRef]);
 
 	return (
@@ -17,7 +26,6 @@ export const VideoTile = ({ videoRef, containerClassName, ...props }) => {
 				className="w-full h-full object-cover rounded-xl"
 				autoPlay
 				playsInline
-				muted
 			/>
 		</div>
 	);
