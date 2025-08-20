@@ -68,8 +68,6 @@ async function getICEServers() {
 			httpres.on("end", function () {
 				try {
 					const response = JSON.parse(str);
-					console.log("ICE Servers Response: ", response);
-
 					if (
 						response.s === "ok" &&
 						response.v &&
@@ -128,32 +126,36 @@ app.get("/", (req, res) => {
 app.get("/ice-servers", async (req, res) => {
 	try {
 		const serverData = await getICEServers(); // returns your Xirsys object
+		console.log("Raw server data from Xirsys:", serverData);
 
-		// Transform into array format for PeerJS
+		// Always include fallback STUN servers
 		const iceServers = [
-			// Always include a fallback STUN
 			{ urls: "stun:stun.l.google.com:19302" },
 			{ urls: "stun:stun1.l.google.com:19302" },
 		];
 
-		if (serverData && serverData.iceServers) {
-			iceServers.push({
-				urls: serverData.iceServers.urls, // array of TURN/STUN URLs from Xirsys
-				username: serverData.iceServers.username,
-				credential: serverData.iceServers.credential,
-			});
+		// Add Xirsys TURN/STUN server if available
+		if (serverData && serverData.urls) {
+			const turnServer = {
+				urls: serverData.urls, // Xirsys URLs array
+				username: serverData.username,
+				credential: serverData.credential,
+			};
+			console.log("Adding TURN server:", turnServer);
+			iceServers.push(turnServer);
 		}
 
+		console.log("Final ICE servers array:", iceServers);
 		res.json({ iceServers });
 	} catch (error) {
 		console.error("Error getting ICE servers:", error);
 		// fallback if Xirsys fails
-		res.json({
-			iceServers: [
-				{ urls: "stun:stun.l.google.com:19302" },
-				{ urls: "stun:stun1.l.google.com:19302" },
-			],
-		});
+		const fallback = [
+			{ urls: "stun:stun.l.google.com:19302" },
+			{ urls: "stun:stun1.l.google.com:19302" },
+		];
+		console.log("Using fallback ICE servers:", fallback);
+		res.json({ iceServers: fallback });
 	}
 });
 
@@ -297,7 +299,7 @@ function disconnectUser(socketId) {
 	}
 }
 
-server.listen(3001, () => {
+server.listen(3000, () => {
 	console.log("WebRTC Server is running on port 3001");
 
 	// Initialize ICE servers on startup
