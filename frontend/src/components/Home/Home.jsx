@@ -55,6 +55,20 @@ export const Home = () => {
 					console.error("Call error:", error);
 					toast.error("Failed to establish video connection");
 				});
+
+				// Monitor connection quality
+				if (call.peerConnection) {
+					call.peerConnection.oniceconnectionstatechange = () => {
+						console.log("ICE connection state:", call.peerConnection.iceConnectionState);
+						if (call.peerConnection.iceConnectionState === "failed") {
+							toast.error("Connection failed - trying to reconnect...");
+						} else if (call.peerConnection.iceConnectionState === "disconnected") {
+							toast.warning("Connection lost - attempting to reconnect...");
+						} else if (call.peerConnection.iceConnectionState === "connected") {
+							toast.success("Video connection established!");
+						}
+					};
+				}
 			} catch (error) {
 				console.error("Error calling peer:", error);
 				toast.error("Failed to connect: " + error.message);
@@ -80,6 +94,19 @@ export const Home = () => {
 		toast.info("Your partner has disconnected");
 	}, []);
 
+	const startSearch = useCallback(() => {
+		if (!socketRef.current || !peerId) {
+			toast.error("Please wait for connection to initialize");
+			return;
+		}
+
+		console.log("Starting search for peer");
+		setConnectionStatus("searching");
+		setIsSearching(true);
+		
+		socketRef.current.emit("findPeer", { peerId });
+	}, [peerId]);
+
 	const initializePeer = useCallback(async () => {
 		try {
 			const stream = await getLocalStream();
@@ -91,6 +118,8 @@ export const Home = () => {
 			let iceServers = [
 				{ urls: "stun:stun.l.google.com:19302" },
 				{ urls: "stun:stun1.l.google.com:19302" },
+				{ urls: "stun:stun2.l.google.com:19302" },
+				{ urls: "stun:stun3.l.google.com:19302" },
 			];
 
 			try {
@@ -116,7 +145,9 @@ export const Home = () => {
 			const peer = new Peer(undefined, {
 				config: {
 					iceServers: iceServers,
+					iceCandidatePoolSize: 10,
 				},
+				debug: 1, // Enable debug logs for troubleshooting
 			});
 			peerRef.current = peer;
 
@@ -199,11 +230,38 @@ export const Home = () => {
 					console.error("Call error:", error);
 					toast.error("Connection error occurred");
 				});
+
+				// Monitor connection quality for incoming calls too
+				if (call.peerConnection) {
+					call.peerConnection.oniceconnectionstatechange = () => {
+						console.log("ICE connection state:", call.peerConnection.iceConnectionState);
+						if (call.peerConnection.iceConnectionState === "failed") {
+							toast.error("Connection failed - trying to reconnect...");
+						} else if (call.peerConnection.iceConnectionState === "disconnected") {
+							toast.warning("Connection lost - attempting to reconnect...");
+						} else if (call.peerConnection.iceConnectionState === "connected") {
+							toast.success("Video connection established!");
+						}
+					};
+				}
 			});
 
 			peer.on("error", (error) => {
 				console.error("PeerJS error:", error);
-				toast.error("Connection error: " + error.message);
+				if (error.type === "network") {
+					toast.error("Network error - check your internet connection");
+				} else if (error.type === "peer-unavailable") {
+					toast.error("Partner is not available - trying to reconnect");
+					// Try to find a new peer
+					setTimeout(() => {
+						if (socketRef.current && connectionStatus === "connected") {
+							socketRef.current.emit("skipPeer");
+							setTimeout(() => startSearch(), 1000);
+						}
+					}, 2000);
+				} else {
+					toast.error("Connection error: " + error.message);
+				}
 			});
 
 			return true;
@@ -212,20 +270,7 @@ export const Home = () => {
 			toast.error("Failed to initialize connection");
 			return false;
 		}
-	}, [getLocalStream, callPeer, handlePartnerLeft]);
-
-	function startSearch() {
-		if (!socketRef.current || !peerId) {
-			toast.error("Please wait for connection to initialize");
-			return;
-		}
-
-		console.log("Starting search for peer");
-		setConnectionStatus("searching");
-		setIsSearching(true);
-
-		socketRef.current.emit("findPeer", { peerId });
-	}
+	}, [getLocalStream, callPeer, handlePartnerLeft, startSearch, connectionStatus]);
 
 	function skipPeer() {
 		if (!socketRef.current) return;
@@ -373,7 +418,7 @@ export const Home = () => {
 				{/* Local video - desktop */}
 				<div className="hidden md:block flex-1 h-full w-full min-h-0">
 					{localStream ? (
-						<VideoTile videoRef={localStream} />
+						<VideoTile videoRef={localStream} muted={true} />
 					) : (
 						<div className="flex-1 w-full h-full flex items-center justify-center bg-gray-200 rounded-xl">
 							<div className="text-center text-gray-600">
@@ -391,15 +436,14 @@ export const Home = () => {
 							ref={nodeRef}
 							className="md:hidden absolute bottom-4 right-4 w-32 h-24 z-10"
 						>
-							<VideoTile
-								videoRef={localStream}
-								containerClassName="w-full h-full border-2 border-white shadow-lg"
+							<VideoTile 
+								videoRef={localStream} 
+								containerClassName="w-full h-full border-2 border-white shadow-lg" 
+								muted={true}
 							/>
 						</div>
 					</Draggable>
-				)}
-
-				{/* Chat component */}
+				)}				{/* Chat component */}
 				<Chat socket={socketRef.current} isConnected={isConnected} />
 			</div>
 		</div>

@@ -82,6 +82,8 @@ async function getICEServers() {
 						iceServers = [
 							{ urls: "stun:stun.l.google.com:19302" },
 							{ urls: "stun:stun1.l.google.com:19302" },
+							{ urls: "stun:stun2.l.google.com:19302" },
+							{ urls: "stun:stun3.l.google.com:19302" },
 						];
 						iceServersLastFetch = now;
 						resolve(iceServers);
@@ -95,6 +97,8 @@ async function getICEServers() {
 					iceServers = [
 						{ urls: "stun:stun.l.google.com:19302" },
 						{ urls: "stun:stun1.l.google.com:19302" },
+						{ urls: "stun:stun2.l.google.com:19302" },
+						{ urls: "stun:stun3.l.google.com:19302" },
 					];
 					iceServersLastFetch = now;
 					resolve(iceServers);
@@ -108,6 +112,8 @@ async function getICEServers() {
 			iceServers = [
 				{ urls: "stun:stun.l.google.com:19302" },
 				{ urls: "stun:stun1.l.google.com:19302" },
+				{ urls: "stun:stun2.l.google.com:19302" },
+				{ urls: "stun:stun3.l.google.com:19302" },
 			];
 			iceServersLastFetch = now;
 			resolve(iceServers);
@@ -132,10 +138,18 @@ app.get("/ice-servers", async (req, res) => {
 		const iceServers = [
 			{ urls: "stun:stun.l.google.com:19302" },
 			{ urls: "stun:stun1.l.google.com:19302" },
+			{ urls: "stun:stun2.l.google.com:19302" },
+			{ urls: "stun:stun3.l.google.com:19302" },
 		];
 
 		// Add Xirsys TURN/STUN server if available
-		if (serverData && serverData.urls) {
+		if (serverData && Array.isArray(serverData)) {
+			// serverData is already an array of ICE servers
+			serverData.forEach((server) => {
+				console.log("Adding ICE server:", server);
+				iceServers.push(server);
+			});
+		} else if (serverData && serverData.urls) {
 			const turnServer = {
 				urls: serverData.urls, // Xirsys URLs array
 				username: serverData.username,
@@ -153,6 +167,8 @@ app.get("/ice-servers", async (req, res) => {
 		const fallback = [
 			{ urls: "stun:stun.l.google.com:19302" },
 			{ urls: "stun:stun1.l.google.com:19302" },
+			{ urls: "stun:stun2.l.google.com:19302" },
+			{ urls: "stun:stun3.l.google.com:19302" },
 		];
 		console.log("Using fallback ICE servers:", fallback);
 		res.json({ iceServers: fallback });
@@ -177,6 +193,8 @@ io.on("connection", (socket) => {
 				iceServers: [
 					{ urls: "stun:stun.l.google.com:19302" },
 					{ urls: "stun:stun1.l.google.com:19302" },
+					{ urls: "stun:stun2.l.google.com:19302" },
+					{ urls: "stun:stun3.l.google.com:19302" },
 				],
 			});
 		}
@@ -299,7 +317,7 @@ function disconnectUser(socketId) {
 	}
 }
 
-server.listen(3000, () => {
+server.listen(3001, () => {
 	console.log("WebRTC Server is running on port 3001");
 
 	// Initialize ICE servers on startup

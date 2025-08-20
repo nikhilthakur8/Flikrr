@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from "react";
 
-export const VideoTile = ({ videoRef, containerClassName, ...props }) => {
+export const VideoTile = ({ videoRef, containerClassName, muted = false, ...props }) => {
 	const localRef = useRef(null);
 
 	useEffect(() => {
@@ -26,6 +26,7 @@ export const VideoTile = ({ videoRef, containerClassName, ...props }) => {
 				className="w-full h-full object-cover rounded-xl"
 				autoPlay
 				playsInline
+				muted={muted}
 			/>
 		</div>
 	);
