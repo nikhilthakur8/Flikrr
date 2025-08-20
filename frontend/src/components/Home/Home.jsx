@@ -87,8 +87,29 @@ export const Home = () => {
 
 			setLocalStream(stream);
 
-			// Initialize PeerJS
-			const peer = new Peer();
+			// Get ICE servers from backend
+			let iceServers = [
+				{ urls: "stun:stun.l.google.com:19302" },
+				{ urls: "stun:stun1.l.google.com:19302" }
+			];
+
+			try {
+				const response = await fetch(`${import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001'}/ice-servers`);
+				const data = await response.json();
+				if (data.iceServers && data.iceServers.length > 0) {
+					iceServers = data.iceServers;
+					console.log("Using ICE servers from backend:", iceServers);
+				}
+			} catch (error) {
+				console.log("Failed to get ICE servers from backend, using fallback:", error);
+			}
+
+			// Initialize PeerJS with ICE servers configuration
+			const peer = new Peer(undefined, {
+				config: {
+					iceServers: iceServers
+				}
+			});
 			peerRef.current = peer;
 
 			peer.on("open", (id) => {
@@ -96,12 +117,19 @@ export const Home = () => {
 				console.log("Peer ID:", id);
 
 				// Initialize Socket.io connection
-				const socket = io(import.meta.env.VITE_BACKEND_URL);
+				const socket = io(import.meta.env.VITE_BACKEND_URL || 'http://localhost:3001');
 				socketRef.current = socket;
 
 				// Socket event listeners
 				socket.on("connect", () => {
 					console.log("Connected to server");
+					// Request ICE servers via socket as backup
+					socket.emit("getICEServers");
+				});
+
+				socket.on("iceServers", (data) => {
+					console.log("Received ICE servers via socket:", data.iceServers);
+					// Update peer configuration if needed (for future connections)
 				});
 
 				socket.on("searchingForPeer", () => {
