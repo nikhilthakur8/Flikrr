@@ -55,6 +55,17 @@ export const Home = () => {
 					console.error("Call error:", error);
 					toast.error("Failed to establish video connection");
 				});
+
+				// Add connection state monitoring
+				if (call.peerConnection) {
+					call.peerConnection.oniceconnectionstatechange = () => {
+						console.log("ICE connection state:", call.peerConnection.iceConnectionState);
+						if (call.peerConnection.iceConnectionState === 'failed') {
+							console.log("ICE connection failed, attempting restart");
+							call.peerConnection.restartIce();
+						}
+					};
+				}
 			} catch (error) {
 				console.error("Error calling peer:", error);
 				toast.error("Failed to connect: " + error.message);
@@ -75,11 +86,17 @@ export const Home = () => {
 		setConnectionStatus("disconnected");
 		setIsSearching(false);
 
-		// Now request for New Search
-		startSearch();
-
 		toast.info("Your partner has disconnected");
-	}, []);
+
+		// Now request for New Search after a short delay
+		setTimeout(() => {
+			if (socketRef.current && peerId) {
+				setConnectionStatus("searching");
+				setIsSearching(true);
+				socketRef.current.emit("findPeer", { peerId });
+			}
+		}, 1000);
+	}, [peerId]);
 
 	const startSearch = useCallback(() => {
 		if (!socketRef.current || !peerRef.current) {
@@ -117,14 +134,8 @@ export const Home = () => {
 				);
 				const data = await response.json();
 				if (data.iceServers && data.iceServers.length > 0) {
-					// Always prefer TURN servers if available
-					const turnServers = data.iceServers.filter((s) =>
-						Array.isArray(s.urls)
-							? s.urls.some((u) => u.startsWith("turn"))
-							: String(s.urls).startsWith("turn")
-					);
-					iceServers =
-						turnServers.length > 0 ? turnServers : data.iceServers;
+					// Use all ICE servers (both STUN and TURN) for better connectivity
+					iceServers = data.iceServers;
 					console.log("Using ICE servers from backend:", iceServers);
 				}
 			} catch (error) {
@@ -139,6 +150,9 @@ export const Home = () => {
 				config: {
 					iceServers: iceServers,
 					iceCandidatePoolSize: 10,
+					iceTransportPolicy: 'all', // Use both UDP and TCP
+					bundlePolicy: 'max-bundle',
+					rtcpMuxPolicy: 'require'
 				},
 				debug: 1, // Enable debug logs for troubleshooting
 			});
@@ -148,7 +162,7 @@ export const Home = () => {
 				setPeerId(id);
 				// Initialize Socket.io connection
 				const socket = io(
-					import.meta.env.VITE_BACKEND_URL || "http://localhost:3001"
+					import.meta.env.VITE_BACKEND_URL || "http://localhost:3000"
 				);
 				socketRef.current = socket;
 
@@ -293,7 +307,7 @@ export const Home = () => {
 				socketRef.current.disconnect();
 			}
 		};
-	}, []);
+	}, [initializePeer]);
 
 	const getStatusText = () => {
 		switch (connectionStatus) {
