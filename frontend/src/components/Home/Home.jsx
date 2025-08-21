@@ -41,6 +41,28 @@ export const Home = () => {
 				const call = peerRef.current.call(peerId, stream);
 				currentCallRef.current = call;
 
+				// Add ICE connection state monitoring for cross-network debugging
+				call.peerConnection.oniceconnectionstatechange = () => {
+					const state = call.peerConnection.iceConnectionState;
+					console.log("ICE connection state:", state);
+					
+					if (state === 'failed') {
+						console.error("ICE connection failed - TURN servers may not be working");
+						toast.error("Connection failed - network issue detected");
+					} else if (state === 'connected') {
+						console.log("ICE connection established successfully");
+					} else if (state === 'disconnected') {
+						console.warn("ICE connection disconnected");
+					}
+				};
+
+				// Monitor ICE candidates for debugging
+				call.peerConnection.onicecandidate = (event) => {
+					if (event.candidate) {
+						console.log("ICE candidate type:", event.candidate.type, event.candidate);
+					}
+				};
+
 				call.on("stream", (remoteStream) => {
 					console.log("Remote stream received from:", peerId);
 					setRemoteStream(remoteStream);
@@ -75,11 +97,15 @@ export const Home = () => {
 		setConnectionStatus("disconnected");
 		setIsSearching(false);
 
-		// Now request for New Search
-		startSearch();
-
 		toast.info("Your partner has disconnected");
-	}, []);
+
+		// Wait a moment then automatically search for new partner
+		setTimeout(() => {
+			if (socketRef.current && peerId) {
+				startSearch();
+			}
+		}, 1000);
+	}, [peerId, startSearch]);
 
 	const startSearch = useCallback(() => {
 		if (!socketRef.current || !peerRef.current) {
@@ -112,13 +138,26 @@ export const Home = () => {
 				const response = await fetch(
 					`${
 						import.meta.env.VITE_BACKEND_URL ||
-						"http://localhost:3001"
+						"http://localhost:3000"
 					}/api/ice-servers`
 				);
 				const data = await response.json();
 				if (data.iceServers && data.iceServers.length > 0) {
 					iceServers = data.iceServers;
 					console.log("Using ICE servers from backend:", iceServers);
+					
+					// Check if we have TURN servers
+					const turnServers = iceServers.filter(server => 
+						Array.isArray(server.urls) 
+							? server.urls.some(url => url.startsWith('turn:'))
+							: server.urls && server.urls.startsWith('turn:')
+					);
+					
+					if (turnServers.length > 0) {
+						console.log("✅ TURN servers available for cross-network connections:", turnServers);
+					} else {
+						console.warn("⚠️ No TURN servers found - cross-network calls may fail");
+					}
 				}
 			} catch (error) {
 				console.log(
@@ -132,8 +171,11 @@ export const Home = () => {
 				config: {
 					iceServers: iceServers,
 					iceCandidatePoolSize: 10,
+					iceTransportPolicy: 'all', // Use both STUN and TURN
+					bundlePolicy: 'max-bundle',
+					rtcpMuxPolicy: 'require'
 				},
-				debug: 1, // Enable debug logs for troubleshooting
+				debug: 2, // Increase debug level for troubleshooting
 			});
 			peerRef.current = peer;
 
@@ -141,7 +183,7 @@ export const Home = () => {
 				setPeerId(id);
 				// Initialize Socket.io connection
 				const socket = io(
-					import.meta.env.VITE_BACKEND_URL || "http://localhost:3001"
+					import.meta.env.VITE_BACKEND_URL || "http://localhost:3000"
 				);
 				socketRef.current = socket;
 
@@ -180,6 +222,26 @@ export const Home = () => {
 			peer.on("call", async (call) => {
 				console.log("Incoming call from:", call.peer);
 				currentCallRef.current = call;
+
+				// Add ICE connection state monitoring for incoming calls
+				call.peerConnection.oniceconnectionstatechange = () => {
+					const state = call.peerConnection.iceConnectionState;
+					console.log("ICE connection state (incoming):", state);
+					
+					if (state === 'failed') {
+						console.error("ICE connection failed (incoming) - TURN servers may not be working");
+						toast.error("Connection failed - network issue detected");
+					} else if (state === 'connected') {
+						console.log("ICE connection established successfully (incoming)");
+					}
+				};
+
+				// Monitor ICE candidates for incoming calls
+				call.peerConnection.onicecandidate = (event) => {
+					if (event.candidate) {
+						console.log("ICE candidate type (incoming):", event.candidate.type, event.candidate);
+					}
+				};
 
 				const stream = await getLocalStream();
 				call.answer(stream);
@@ -313,7 +375,7 @@ export const Home = () => {
 				socketRef.current.disconnect();
 			}
 		};
-	}, []);
+	}, [initializePeer]);
 
 	const getStatusText = () => {
 		switch (connectionStatus) {
