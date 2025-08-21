@@ -293,7 +293,7 @@ export const Home = () => {
 				socketRef.current.disconnect();
 			}
 		};
-	}, [initializePeer]);
+	}, []);
 
 	const getStatusText = () => {
 		switch (connectionStatus) {
