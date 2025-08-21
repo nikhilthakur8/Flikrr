@@ -110,10 +110,7 @@ export const Home = () => {
 
 			try {
 				const response = await fetch(
-					`${
-						import.meta.env.VITE_BACKEND_URL ||
-						"http://localhost:3001"
-					}/ice-servers`
+					`${import.meta.env.VITE_BACKEND_URL}/api/ice-servers`
 				);
 				const data = await response.json();
 				if (data.iceServers && data.iceServers.length > 0) {
@@ -140,9 +137,7 @@ export const Home = () => {
 			peer.on("open", (id) => {
 				setPeerId(id);
 				// Initialize Socket.io connection
-				const socket = io(
-					import.meta.env.VITE_BACKEND_URL || "http://localhost:3001"
-				);
+				const socket = io(import.meta.env.VITE_BACKEND_URL);
 				socketRef.current = socket;
 
 				// Socket event listeners
