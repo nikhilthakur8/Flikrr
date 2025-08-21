@@ -12,6 +12,7 @@ export const Home = () => {
 
 	const [localStream, setLocalStream] = useState(null);
 	const [remoteStream, setRemoteStream] = useState(null);
+	const [peerId, setPeerId] = useState("");
 	const [isConnected, setIsConnected] = useState(false);
 	const [isSearching, setIsSearching] = useState(false);
 	const [connectionStatus, setConnectionStatus] = useState("disconnected");
@@ -81,8 +82,7 @@ export const Home = () => {
 	}, []);
 
 	const startSearch = useCallback(() => {
-		const currentPeerId = peerRef.current?.id;
-		if (!socketRef.current || !currentPeerId) {
+		if (!socketRef.current || !peerRef.current) {
 			toast.error("Please wait for connection to initialize");
 			return;
 		}
@@ -90,8 +90,8 @@ export const Home = () => {
 		setConnectionStatus("searching");
 		setIsSearching(true);
 
-		socketRef.current.emit("findPeer", { peerId: currentPeerId });
-	}, []);
+		socketRef.current.emit("findPeer", { peerId });
+	}, [peerId, peerRef]);
 
 	const initializePeer = useCallback(async () => {
 		try {
@@ -118,6 +118,7 @@ export const Home = () => {
 				const data = await response.json();
 				if (data.iceServers && data.iceServers.length > 0) {
 					iceServers = data.iceServers;
+					console.log("Using ICE servers from backend:", iceServers);
 				}
 			} catch (error) {
 				console.log(
@@ -137,6 +138,7 @@ export const Home = () => {
 			peerRef.current = peer;
 
 			peer.on("open", (id) => {
+				setPeerId(id);
 				// Initialize Socket.io connection
 				const socket = io(
 					import.meta.env.VITE_BACKEND_URL || "http://localhost:3001"
@@ -311,7 +313,7 @@ export const Home = () => {
 							containerClassName="absolute inset-0 w-full h-full object-cover rounded-b-xl"
 						/>
 					) : (
-						<div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-800 rounded-b-xl">
+						<div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-800 ">
 							<div className="text-center text-gray-300 px-4">
 								<div className="text-lg font-semibold">
 									{getStatusText()}
@@ -334,7 +336,7 @@ export const Home = () => {
 							>
 								<VideoTile
 									videoRef={localStream}
-									containerClassName="w-full h-full border-2 border-white shadow-xl rounded-lg"
+									containerClassName="w-full h-full border-2 border-gray-500 shadow-xl rounded-lg"
 									muted={true}
 									mirror={true}
 								/>
@@ -351,7 +353,7 @@ export const Home = () => {
 							<button
 								className="px-5 py-3 bg-green-600 hover:bg-green-700 active:bg-green-800 transition text-white font-semibold rounded-2xl shadow-md focus:outline-none focus:ring-2 focus:ring-green-400 text-lg"
 								onClick={startSearch}
-								disabled={!peerRef.current?.id}
+								disabled={!peerId}
 							>
 								Start
 							</button>
@@ -421,7 +423,7 @@ export const Home = () => {
 							<button
 								className="px-6 py-3 bg-green-600 hover:bg-green-700 transition text-white font-semibold rounded-2xl shadow-md focus:outline-none focus:ring-2 focus:ring-green-400"
 								onClick={startSearch}
-								disabled={!peerRef.current?.id}
+								disabled={!peerId}
 							>
 								Start
 							</button>
