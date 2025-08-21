@@ -55,17 +55,6 @@ export const Home = () => {
 					console.error("Call error:", error);
 					toast.error("Failed to establish video connection");
 				});
-
-				// Add connection state monitoring
-				if (call.peerConnection) {
-					call.peerConnection.oniceconnectionstatechange = () => {
-						console.log("ICE connection state:", call.peerConnection.iceConnectionState);
-						if (call.peerConnection.iceConnectionState === 'failed') {
-							console.log("ICE connection failed, attempting restart");
-							call.peerConnection.restartIce();
-						}
-					};
-				}
 			} catch (error) {
 				console.error("Error calling peer:", error);
 				toast.error("Failed to connect: " + error.message);
@@ -86,17 +75,11 @@ export const Home = () => {
 		setConnectionStatus("disconnected");
 		setIsSearching(false);
 
-		toast.info("Your partner has disconnected");
+		// Now request for New Search
+		startSearch();
 
-		// Now request for New Search after a short delay
-		setTimeout(() => {
-			if (socketRef.current && peerId) {
-				setConnectionStatus("searching");
-				setIsSearching(true);
-				socketRef.current.emit("findPeer", { peerId });
-			}
-		}, 1000);
-	}, [peerId]);
+		toast.info("Your partner has disconnected");
+	}, []);
 
 	const startSearch = useCallback(() => {
 		if (!socketRef.current || !peerRef.current) {
@@ -121,20 +104,17 @@ export const Home = () => {
 			let iceServers = [
 				{ urls: "stun:stun.l.google.com:19302" },
 				{ urls: "stun:stun1.l.google.com:19302" },
-				{ urls: "stun:stun2.l.google.com:19302" },
-				{ urls: "stun:stun3.l.google.com:19302" },
 			];
 
 			try {
 				const response = await fetch(
 					`${
 						import.meta.env.VITE_BACKEND_URL ||
-						"http://localhost:3000"
-					}/api/ice-servers`
+						"http://localhost:3001"
+					}/ice-servers`
 				);
 				const data = await response.json();
 				if (data.iceServers && data.iceServers.length > 0) {
-					// Use all ICE servers (both STUN and TURN) for better connectivity
 					iceServers = data.iceServers;
 					console.log("Using ICE servers from backend:", iceServers);
 				}
@@ -150,9 +130,6 @@ export const Home = () => {
 				config: {
 					iceServers: iceServers,
 					iceCandidatePoolSize: 10,
-					iceTransportPolicy: 'all', // Use both UDP and TCP
-					bundlePolicy: 'max-bundle',
-					rtcpMuxPolicy: 'require'
 				},
 				debug: 1, // Enable debug logs for troubleshooting
 			});
@@ -162,7 +139,7 @@ export const Home = () => {
 				setPeerId(id);
 				// Initialize Socket.io connection
 				const socket = io(
-					import.meta.env.VITE_BACKEND_URL || "http://localhost:3000"
+					import.meta.env.VITE_BACKEND_URL || "http://localhost:3001"
 				);
 				socketRef.current = socket;
 
@@ -307,7 +284,7 @@ export const Home = () => {
 				socketRef.current.disconnect();
 			}
 		};
-	}, [initializePeer]);
+	}, []);
 
 	const getStatusText = () => {
 		switch (connectionStatus) {
