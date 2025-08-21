@@ -5,9 +5,6 @@ import Draggable from "react-draggable";
 import { Chat } from "./Chat";
 import { toast } from "sonner";
 
-import Peer from "peerjs";
-import io from "socket.io-client";
-
 export const Home = () => {
 	const peerRef = useRef(null);
 	const socketRef = useRef(null);
@@ -20,279 +17,278 @@ export const Home = () => {
 	const [isSearching, setIsSearching] = useState(false);
 	const [connectionStatus, setConnectionStatus] = useState("disconnected");
 
-	// get local media
+	// Initialize media and peer connection
 	const getLocalStream = useCallback(async () => {
 		try {
-			const s = await navigator.mediaDevices.getUserMedia({
+			const stream = await navigator.mediaDevices.getUserMedia({
 				video: true,
 				audio: true,
 			});
-			return s;
+			return stream;
 		} catch (error) {
-			console.error("Error accessing media:", error);
+			console.log("Error accessing media devices:", error);
 			toast.error("Please enable camera and microphone");
 			return null;
 		}
 	}, []);
 
-	// stable startSearch (used elsewhere)
-	const startSearch = useCallback(() => {
-		if (!socketRef.current || !peerRef.current) {
-			toast.error("Please wait for connection to initialize");
-			return;
-		}
-		console.log("startSearch -> emitting findPeer", { peerId });
-		setConnectionStatus("searching");
-		setIsSearching(true);
-		socketRef.current.emit("findPeer", { peerId });
-	}, [peerId]);
-
-	// handle partner left
-	const handlePartnerLeft = useCallback(() => {
-		if (currentCallRef.current) {
-			try {
-				currentCallRef.current.close();
-			} catch (e) {}
-			currentCallRef.current = null;
-		}
-		setRemoteStream(null);
-		setIsConnected(false);
-		setConnectionStatus("disconnected");
-		setIsSearching(false);
-
-		// try to find new partner
-		startSearch();
-
-		toast.info("Your partner has disconnected");
-	}, [startSearch]);
-
-	// call a peer
 	const callPeer = useCallback(
-		async (targetPeerId) => {
+		async (peerId) => {
 			try {
 				const stream = await getLocalStream();
-				if (!stream || !peerRef.current) {
-					console.warn(
-						"No local stream or peer not ready for outgoing call"
-					);
-					return;
-				}
+				if (!stream || !peerRef.current) return;
 
-				console.log("Calling peer:", targetPeerId);
-				const call = peerRef.current.call(targetPeerId, stream);
+				const call = peerRef.current.call(peerId, stream);
 				currentCallRef.current = call;
 
-				// debugging and ICE handlers
-				if (call.peerConnection) {
-					const pc = call.peerConnection;
-					pc.onicecandidate = (ev) =>
-						console.log("[OUT] onicecandidate", ev?.candidate);
-					pc.oniceconnectionstatechange = () =>
-						console.log(
-							"[OUT] iceConnectionState:",
-							pc.iceConnectionState
-						);
-					pc.onicegatheringstatechange = () =>
-						console.log(
-							"[OUT] iceGatheringState:",
-							pc.iceGatheringState
-						);
-					pc.onconnectionstatechange = () =>
-						console.log(
-							"[OUT] connectionState:",
-							pc.connectionState
-						);
-				}
-
-				call.on("stream", (remote) => {
-					console.log("Remote stream received (outgoing)");
-					setRemoteStream(remote);
+				call.on("stream", (remoteStream) => {
+					console.log("Remote stream received from:", peerId);
+					setRemoteStream(remoteStream);
 				});
 
 				call.on("close", () => {
-					console.log("Outgoing call closed");
+					console.log("Call ended");
 					setRemoteStream(null);
 				});
 
-				call.on("error", (err) => {
-					console.error("Outgoing call error:", err);
+				call.on("error", (error) => {
+					console.error("Call error:", error);
 					toast.error("Failed to establish video connection");
 				});
-			} catch (err) {
-				console.error("callPeer error:", err);
-				toast.error("Failed to call peer: " + (err?.message || err));
+			} catch (error) {
+				console.error("Error calling peer:", error);
+				toast.error("Failed to connect: " + error.message);
 			}
 		},
 		[getLocalStream]
 	);
 
-	// initialize PeerJS and socket.io
+	const handlePartnerLeft = useCallback(() => {
+		// Close current call
+		if (currentCallRef.current) {
+			currentCallRef.current.close();
+			currentCallRef.current = null;
+		}
+
+		setRemoteStream(null);
+		setIsConnected(false);
+		setConnectionStatus("disconnected");
+		setIsSearching(false);
+
+		// Now request for New Search
+		startSearch();
+
+		toast.info("Your partner has disconnected");
+	}, []);
+
+	const startSearch = useCallback(() => {
+		if (!socketRef.current || !peerRef.current) {
+			toast.error("Please wait for connection to initialize");
+			return;
+		}
+
+		setConnectionStatus("searching");
+		setIsSearching(true);
+
+		socketRef.current.emit("findPeer", { peerId });
+	}, [peerId, peerRef]);
+
 	const initializePeer = useCallback(async () => {
 		try {
 			const stream = await getLocalStream();
-			if (!stream) {
-				console.warn("No local stream obtained on init");
-				return false;
-			}
+			if (!stream) return false;
+
 			setLocalStream(stream);
 
-			// fetch ice servers
+			// Get ICE servers from backend
 			let iceServers = [];
+
 			try {
-				const base =
-					import.meta.env.VITE_BACKEND_URL ||
-					"https://your-backend.example.com";
-				const res = await fetch(`${base}/api/ice-servers`);
-				const data = await res.json();
-				if (data?.iceServers && data.iceServers.length) {
+				const response = await fetch(
+					`${
+						import.meta.env.VITE_BACKEND_URL ||
+						"http://localhost:3001"
+					}/api/ice-servers`
+				);
+				const data = await response.json();
+				if (data.iceServers && data.iceServers.length > 0) {
 					iceServers = data.iceServers;
-					console.log("ICE servers from backend:", iceServers);
-				} else {
-					console.log(
-						"No iceServers returned from backend, using defaults"
-					);
+					console.log("Using ICE servers from backend:", iceServers);
 				}
-			} catch (err) {
-				console.warn("Failed to fetch ice servers:", err);
+				console.log("ICE servers initialized:", iceServers);
+			} catch (error) {
+				console.log(
+					"Failed to get ICE servers from backend, using fallback:",
+					error
+				);
 			}
 
-			// create Peer - include iceTransportPolicy for debugging if needed
+			// Initialize PeerJS with ICE servers configuration
 			const peer = new Peer(undefined, {
 				config: {
 					iceServers: iceServers,
 					iceCandidatePoolSize: 10,
-					// Uncomment to force relay-only (verify TURN): iceTransportPolicy: "relay"
 				},
-				debug: 2,
+				debug: 1, // Enable debug logs for troubleshooting
 			});
 			peerRef.current = peer;
 
 			peer.on("open", (id) => {
-				console.log("Peer open id:", id);
 				setPeerId(id);
-
-				// create secure socket connection (use wss/https endpoint in production)
-				const endpoint =
-					import.meta.env.VITE_BACKEND_URL ||
-					"https://your-backend.example.com";
-				const socket = io(endpoint, {
-					transports: ["websocket", "polling"],
-				});
+				// Initialize Socket.io connection
+				const socket = io(
+					import.meta.env.VITE_BACKEND_URL || "http://localhost:3001"
+				);
 				socketRef.current = socket;
 
+				// Socket event listeners
 				socket.on("connect", () => {
-					console.log("Socket connected:", socket.id);
-					socket.emit("registerPeer", { peerId: id });
+					// On Connection Get the Ice servers from backend
+					socket.emit("getICEServers");
 				});
 
 				socket.on("peerMatched", async (data) => {
-					console.log("peerMatched:", data);
 					setConnectionStatus("connected");
 					setIsSearching(false);
 					setIsConnected(true);
-					toast.success("Connected!");
+					toast.success("Connected! Successfully");
 
-					if (data?.shouldInitiateCall) {
+					if (data.shouldInitiateCall) {
+						// Call the Peer Now
 						await callPeer(data.partnerPeerId);
 					}
 				});
 
 				socket.on("partnerLeft", () => {
-					console.log("partnerLeft received");
-					handlePartnerLeft();
+					console.log("Partner left the chat");
+					handlePartnerLeft(socket);
 				});
 
-				socket.on("disconnect", (reason) => {
-					console.log("Socket disconnected:", reason);
+				socket.on("disconnect", () => {
+					console.log("Disconnected from server");
 					setConnectionStatus("disconnected");
 					setIsSearching(false);
 					setIsConnected(false);
 				});
-
-				socket.on("iceServers", (payload) => {
-					console.log("iceServers event from server:", payload);
-				});
 			});
 
-			// incoming call handler
+			// Handle incoming calls
 			peer.on("call", async (call) => {
 				console.log("Incoming call from:", call.peer);
 				currentCallRef.current = call;
-				const local = await getLocalStream();
-				call.answer(local);
 
-				if (call.peerConnection) {
-					const pc = call.peerConnection;
-					pc.onicecandidate = (ev) =>
-						console.log("[IN] onicecandidate", ev?.candidate);
-					pc.oniceconnectionstatechange = () =>
-						console.log(
-							"[IN] iceConnectionState:",
-							pc.iceConnectionState
-						);
-					pc.onicegatheringstatechange = () =>
-						console.log(
-							"[IN] iceGatheringState:",
-							pc.iceGatheringState
-						);
-					pc.onconnectionstatechange = () =>
-						console.log(
-							"[IN] connectionState:",
-							pc.connectionState
-						);
-				}
+				const stream = await getLocalStream();
+				call.answer(stream);
 
-				call.on("stream", (remote) => {
-					console.log("Incoming call remote stream received");
-					setRemoteStream(remote);
+				call.on("stream", (remoteStream) => {
+					console.log("Received remote stream");
+					setRemoteStream(remoteStream);
 				});
 
 				call.on("close", () => {
-					console.log("Incoming call closed");
+					console.log("Call ended");
 					setRemoteStream(null);
 				});
 
-				call.on("error", (err) => {
-					console.error("Incoming call error:", err);
+				call.on("error", (error) => {
+					console.error("Call error:", error);
 					toast.error("Connection error occurred");
 				});
+				if (call.peerConnection) {
+					call.peerConnection.oniceconnectionstatechange = () => {
+						console.log(
+							"ICE connection state:",
+							call.peerConnection.iceConnectionState
+						);
+						if (
+							call.peerConnection.iceConnectionState === "failed"
+						) {
+							toast.error(
+								"Connection failed - trying to reconnect..."
+							);
+						} else if (
+							call.peerConnection.iceConnectionState ===
+							"disconnected"
+						) {
+							toast.warning(
+								"Connection lost - attempting to reconnect..."
+							);
+						} else if (
+							call.peerConnection.iceConnectionState ===
+							"connected"
+						) {
+							toast.success("Video connection established!");
+						}
+					};
+				}
 			});
 
-			peer.on("error", (err) => {
-				console.error("PeerJS error:", err);
-				toast.error("PeerJS error: " + (err?.message || err));
+			peer.on("error", (error) => {
+				console.error("PeerJS error:", error);
+				if (error.type === "network") {
+					toast.error(
+						"Network error - check your internet connection"
+					);
+				} else if (error.type === "peer-unavailable") {
+					toast.error(
+						"Partner is not available - trying to reconnect"
+					);
+					// Try to find a new peer
+					setTimeout(() => {
+						if (
+							socketRef.current &&
+							connectionStatus === "connected"
+						) {
+							socketRef.current.emit("skipPeer");
+							setTimeout(() => startSearch(), 1000);
+						}
+					}, 2000);
+				} else {
+					toast.error("Connection error: " + error.message);
+				}
 			});
 
 			return true;
 		} catch (error) {
-			console.error("initializePeer error:", error);
+			console.error("Failed to initialize peer:", error);
 			toast.error("Failed to initialize connection");
 			return false;
 		}
-	}, [getLocalStream, callPeer, handlePartnerLeft]);
+	}, [
+		getLocalStream,
+		callPeer,
+		handlePartnerLeft,
+		startSearch,
+		connectionStatus,
+	]);
 
 	function skipPeer() {
 		if (!socketRef.current) return;
+
 		console.log("Skipping current peer");
+
+		// Close current call
 		if (currentCallRef.current) {
-			try {
-				currentCallRef.current.close();
-			} catch (e) {}
+			currentCallRef.current.close();
 			currentCallRef.current = null;
 		}
+
 		setRemoteStream(null);
 		socketRef.current.emit("skipPeer");
-		setTimeout(() => startSearch(), 500);
+
+		// Automatically start searching for a new peer
+		setTimeout(() => {
+			startSearch();
+		}, 500);
 	}
 
 	function stopConnection() {
 		if (currentCallRef.current) {
-			try {
-				currentCallRef.current.close();
-			} catch (e) {}
+			currentCallRef.current.close();
 			currentCallRef.current = null;
 		}
-		if (socketRef.current) socketRef.current.emit("stopConnection");
+
+		socketRef.current.emit("stopConnection");
 		setRemoteStream(null);
 		setIsConnected(false);
 		setConnectionStatus("disconnected");
@@ -304,28 +300,15 @@ export const Home = () => {
 
 		return () => {
 			if (currentCallRef.current) {
-				try {
-					currentCallRef.current.close();
-				} catch (e) {}
+				currentCallRef.current.close();
 			}
 			if (peerRef.current) {
-				try {
-					peerRef.current.destroy();
-				} catch (e) {}
+				peerRef.current.destroy();
 			}
 			if (socketRef.current) {
-				try {
-					socketRef.current.disconnect();
-				} catch (e) {}
-			}
-			if (localStream) {
-				try {
-					localStream.getTracks().forEach((t) => t.stop());
-				} catch (e) {}
+				socketRef.current.disconnect();
 			}
 		};
-		// run once
-		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	const getStatusText = () => {
@@ -345,10 +328,11 @@ export const Home = () => {
 		<div className="flex h-screen flex-col overflow-hidden bg-gray-50">
 			{/* Mobile Layout */}
 			<div className="md:hidden flex flex-col h-full">
+				{/* Remote video - full screen on mobile */}
 				<div className="flex-1 relative bg-gray-50 rounded-b-xl overflow-hidden shadow-md">
 					{remoteStream ? (
 						<VideoTile
-							stream={remoteStream}
+							videoRef={remoteStream}
 							containerClassName="absolute inset-0 w-full h-full object-cover rounded-b-xl"
 						/>
 					) : (
@@ -366,6 +350,7 @@ export const Home = () => {
 						</div>
 					)}
 
+					{/* Local video overlay - draggable */}
 					{localStream && (
 						<Draggable nodeRef={nodeRef} bounds="parent">
 							<div
@@ -373,7 +358,7 @@ export const Home = () => {
 								className="absolute top-4 right-4 w-28 h-36 z-1000 cursor-move"
 							>
 								<VideoTile
-									stream={localStream}
+									videoRef={localStream}
 									containerClassName="w-full h-full border-2 border-gray-500 shadow-xl rounded-lg"
 									muted={true}
 									mirror={true}
@@ -383,7 +368,9 @@ export const Home = () => {
 					)}
 				</div>
 
+				{/* Mobile control panel */}
 				<div className="bg-white border-t border-gray-200 p-4 safe-area-bottom shadow-inner">
+					{/* Buttons */}
 					<div className="flex justify-center items-center gap-3 mb-4">
 						{connectionStatus === "disconnected" && (
 							<button
@@ -422,6 +409,7 @@ export const Home = () => {
 						)}
 					</div>
 
+					{/* Chat */}
 					<div className="h-40 overflow-y-auto rounded-lg border border-gray-200 shadow-inner">
 						<Chat
 							socket={socketRef.current}
@@ -433,10 +421,11 @@ export const Home = () => {
 
 			{/* Desktop Layout */}
 			<div className="hidden md:flex md:flex-row h-full gap-4 p-4">
+				{/* Left - Remote Video */}
 				<div className="flex-1 flex flex-col bg-white shadow-lg rounded-xl border border-gray-200 p-4">
 					<div className="flex-1 w-full min-h-0 rounded-xl overflow-hidden">
 						{remoteStream ? (
-							<VideoTile stream={remoteStream} />
+							<VideoTile videoRef={remoteStream} />
 						) : (
 							<div className="flex-1 w-full h-full flex items-center justify-center bg-gray-100 rounded-xl">
 								<div className="text-center text-gray-500">
@@ -451,6 +440,7 @@ export const Home = () => {
 						)}
 					</div>
 
+					{/* Control Buttons */}
 					<div className="flex justify-center items-center gap-4 mt-4">
 						{connectionStatus === "disconnected" && (
 							<button
@@ -488,11 +478,13 @@ export const Home = () => {
 					</div>
 				</div>
 
+				{/* Right - Local Video & Chat */}
 				<div className="flex-1 flex flex-col bg-white shadow-lg rounded-xl border border-gray-200 p-4 gap-4">
+					{/* Local Video */}
 					<div className="flex-1 w-full min-h-0 rounded-xl overflow-hidden">
 						{localStream ? (
 							<VideoTile
-								stream={localStream}
+								videoRef={localStream}
 								muted
 								mirror
 								containerClassName="rounded-xl"
@@ -507,6 +499,7 @@ export const Home = () => {
 						)}
 					</div>
 
+					{/* Chat */}
 					<div className="h-80 overflow-y-auto rounded-lg border border-gray-200 shadow-inner">
 						<Chat
 							socket={socketRef.current}
