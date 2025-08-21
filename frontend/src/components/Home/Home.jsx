@@ -142,7 +142,7 @@ export const Home = () => {
 					`${
 						import.meta.env.VITE_BACKEND_URL ||
 						"http://localhost:3001"
-					}/ice-servers`
+					}/api/ice-servers`
 				);
 				const data = await response.json();
 				if (data.iceServers && data.iceServers.length > 0) {
