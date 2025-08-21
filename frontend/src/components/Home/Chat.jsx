@@ -19,20 +19,26 @@ export const Chat = ({ socket, isConnected }) => {
 
 		// Listen for incoming messages
 		socket.on("receiveMessage", (data) => {
-			setMessages(prev => [...prev, {
-				text: data.message,
-				sender: "stranger",
-				timestamp: data.timestamp
-			}]);
+			setMessages((prev) => [
+				...prev,
+				{
+					text: data.message,
+					sender: "stranger",
+					timestamp: data.timestamp,
+				},
+			]);
 		});
 
 		// Listen for partner disconnection
 		socket.on("partnerLeft", () => {
-			setMessages(prev => [...prev, {
-				text: "Stranger has disconnected.",
-				sender: "system",
-				timestamp: Date.now()
-			}]);
+			setMessages((prev) => [
+				...prev,
+				{
+					text: "Stranger has disconnected.",
+					sender: "system",
+					timestamp: Date.now(),
+				},
+			]);
 		});
 
 		return () => {
@@ -46,11 +52,13 @@ export const Chat = ({ socket, isConnected }) => {
 		if (!isConnected) {
 			setMessages([]);
 		} else {
-			setMessages([{
-				text: "You're now chatting with a random stranger. Say hi!",
-				sender: "system",
-				timestamp: Date.now()
-			}]);
+			setMessages([
+				{
+					text: "You're now chatting with a random stranger. Say hi!",
+					sender: "system",
+					timestamp: Date.now(),
+				},
+			]);
 		}
 	}, [isConnected]);
 
@@ -59,15 +67,18 @@ export const Chat = ({ socket, isConnected }) => {
 		if (!currentMessage.trim() || !socket || !isConnected) return;
 
 		// Add message to local state
-		setMessages(prev => [...prev, {
-			text: currentMessage,
-			sender: "you",
-			timestamp: Date.now()
-		}]);
+		setMessages((prev) => [
+			...prev,
+			{
+				text: currentMessage,
+				sender: "you",
+				timestamp: Date.now(),
+			},
+		]);
 
 		// Send message to partner
 		socket.emit("sendMessage", { message: currentMessage });
-		
+
 		setCurrentMessage("");
 	};
 
@@ -85,14 +96,20 @@ export const Chat = ({ socket, isConnected }) => {
 	};
 
 	return (
-		<div className="w-full h-56 flex flex-col gap-2 rounded-xl bg-gray-100 shadow-inner">
-			<div className="flex-1 w-full min-h-0 p-4 rounded-xl overflow-auto flex flex-col gap-2">
+		<div className="w-full h-full flex flex-col gap-2 rounded-xl bg-gray-100 shadow-inner">
+			<div className="flex-1 w-full break-words min-h-0 p-2 md:p-4 rounded-xl overflow-auto flex flex-col gap-2">
 				{messages.map((message, index) => (
 					<div key={index} className="flex">
-						<div className={`px-3 py-2 rounded-lg ${getMessageStyle(message.sender)}`}>
+						<div
+							className={`px-2 md:px-3 py-1 md:py-2 rounded-lg text-xs md:text-sm ${getMessageStyle(
+								message.sender
+							)}`}
+						>
 							{message.sender !== "system" && (
-								<div className="text-xs opacity-70 mb-1">
-									{message.sender === "you" ? "You" : "Stranger"}
+								<div className="text-[9px] md:text-[10px] opacity-70 mb-1">
+									{message.sender === "you"
+										? "You"
+										: "Stranger"}
 								</div>
 							)}
 							<div>{message.text}</div>
@@ -107,18 +124,22 @@ export const Chat = ({ socket, isConnected }) => {
 			>
 				<input
 					type="text"
-					placeholder={isConnected ? "Type a message..." : "Connect to start chatting..."}
-					className="flex-grow px-4 py-3 text-gray-800 focus:outline-none disabled:bg-gray-200"
+					placeholder={
+						isConnected
+							? "Type a message..."
+							: "Connect to start chatting..."
+					}
+					className="flex-grow px-3 md:px-4 py-2 md:py-3 text-sm md:text-base text-gray-800 focus:outline-none disabled:bg-gray-200"
 					value={currentMessage}
 					onChange={(e) => setCurrentMessage(e.target.value)}
 					disabled={!isConnected}
 				/>
 				<button
 					type="submit"
-					className="px-6 py-3 text-white font-semibold disabled:opacity-50"
+					className="px-4 md:px-6 py-2 md:py-3 text-white font-semibold disabled:opacity-50 active:bg-gray-300 transition-colors"
 					disabled={!isConnected || !currentMessage.trim()}
 				>
-					<SendHorizonalIcon className="text-gray-800" />
+					<SendHorizonalIcon className="text-gray-800 w-4 h-4 md:w-5 md:h-5" />
 				</button>
 			</form>
 		</div>

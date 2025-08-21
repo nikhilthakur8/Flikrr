@@ -1,6 +1,12 @@
 import React, { useEffect, useRef } from "react";
 
-export const VideoTile = ({ videoRef, containerClassName, muted = false, ...props }) => {
+export const VideoTile = ({
+	videoRef,
+	containerClassName,
+	muted = false,
+	mirror = false,
+	...props
+}) => {
 	const localRef = useRef(null);
 
 	useEffect(() => {
@@ -18,7 +24,9 @@ export const VideoTile = ({ videoRef, containerClassName, muted = false, ...prop
 
 	return (
 		<div
-			className={`flex-1 w-full h-full min-h-0  ${containerClassName}`}
+			className={`flex-1 w-full h-full min-h-0 ${
+				containerClassName || ""
+			}`}
 			{...props}
 		>
 			<video
@@ -27,6 +35,15 @@ export const VideoTile = ({ videoRef, containerClassName, muted = false, ...prop
 				autoPlay
 				playsInline
 				muted={muted}
+				controls={false}
+				style={
+					mirror
+						? {
+								WebkitTransform: "scaleX(-1)",
+								transform: "scaleX(-1)",
+						  }
+						: {}
+				}
 			/>
 		</div>
 	);
