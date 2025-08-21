@@ -43,10 +43,17 @@ export const Home = () => {
 
 				// Monitor ICE connection state for debugging
 				call.peerConnection.oniceconnectionstatechange = () => {
-					console.log("ICE connection state:", call.peerConnection.iceConnectionState);
-					if (call.peerConnection.iceConnectionState === 'failed') {
-						console.error("ICE connection failed - may need TURN servers");
-						toast.error("Connection failed - check network settings");
+					console.log(
+						"ICE connection state:",
+						call.peerConnection.iceConnectionState
+					);
+					if (call.peerConnection.iceConnectionState === "failed") {
+						console.error(
+							"ICE connection failed - may need TURN servers"
+						);
+						toast.error(
+							"Connection failed - check network settings"
+						);
 					}
 				};
 
@@ -92,7 +99,7 @@ export const Home = () => {
 				startSearch();
 			}
 		}, 1000);
-	}, [peerId, startSearch]);
+	}, [peerId]);
 
 	const startSearch = useCallback(() => {
 		if (!socketRef.current || !peerRef.current) {
@@ -146,9 +153,9 @@ export const Home = () => {
 				config: {
 					iceServers: iceServers,
 					iceCandidatePoolSize: 10,
-					iceTransportPolicy: 'all', // Allow both STUN and TURN
-					bundlePolicy: 'max-bundle',
-					rtcpMuxPolicy: 'require'
+					iceTransportPolicy: "all", // Allow both STUN and TURN
+					bundlePolicy: "max-bundle",
+					rtcpMuxPolicy: "require",
 				},
 				debug: 1, // Enable debug logs for troubleshooting
 			});
@@ -200,10 +207,17 @@ export const Home = () => {
 
 				// Monitor ICE connection state for incoming calls
 				call.peerConnection.oniceconnectionstatechange = () => {
-					console.log("ICE connection state (incoming):", call.peerConnection.iceConnectionState);
-					if (call.peerConnection.iceConnectionState === 'failed') {
-						console.error("ICE connection failed - may need TURN servers");
-						toast.error("Connection failed - check network settings");
+					console.log(
+						"ICE connection state (incoming):",
+						call.peerConnection.iceConnectionState
+					);
+					if (call.peerConnection.iceConnectionState === "failed") {
+						console.error(
+							"ICE connection failed - may need TURN servers"
+						);
+						toast.error(
+							"Connection failed - check network settings"
+						);
 					}
 				};
 
