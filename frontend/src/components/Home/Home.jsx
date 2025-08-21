@@ -117,7 +117,14 @@ export const Home = () => {
 				);
 				const data = await response.json();
 				if (data.iceServers && data.iceServers.length > 0) {
-					iceServers = data.iceServers;
+					// Always prefer TURN servers if available
+					const turnServers = data.iceServers.filter((s) =>
+						Array.isArray(s.urls)
+							? s.urls.some((u) => u.startsWith("turn"))
+							: String(s.urls).startsWith("turn")
+					);
+					iceServers =
+						turnServers.length > 0 ? turnServers : data.iceServers;
 					console.log("Using ICE servers from backend:", iceServers);
 				}
 			} catch (error) {
@@ -286,7 +293,7 @@ export const Home = () => {
 				socketRef.current.disconnect();
 			}
 		};
-	}, []);
+	}, [initializePeer]);
 
 	const getStatusText = () => {
 		switch (connectionStatus) {
