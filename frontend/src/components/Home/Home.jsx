@@ -101,12 +101,7 @@ export const Home = () => {
 			setLocalStream(stream);
 
 			// Get ICE servers from backend
-			let iceServers = [
-				{ urls: "stun:stun.l.google.com:19302" },
-				{ urls: "stun:stun1.l.google.com:19302" },
-				{ urls: "stun:stun2.l.google.com:19302" },
-				{ urls: "stun:stun3.l.google.com:19302" },
-			];
+			let iceServers = [];
 
 			try {
 				const response = await fetch(
@@ -117,9 +112,10 @@ export const Home = () => {
 				);
 				const data = await response.json();
 				if (data.iceServers && data.iceServers.length > 0) {
-					iceServers = data.iceServers;
+					iceServers = [data.iceServers[4]];
 					console.log("Using ICE servers from backend:", iceServers);
 				}
+				console.log("ICE servers initialized:", iceServers);
 			} catch (error) {
 				console.log(
 					"Failed to get ICE servers from backend, using fallback:",
@@ -130,17 +126,7 @@ export const Home = () => {
 			// Initialize PeerJS with ICE servers configuration
 			const peer = new Peer(undefined, {
 				config: {
-					iceServers: [
-						{ urls: "stun:stun.l.google.com:19302" },
-						{ urls: "stun:stun1.l.google.com:19302" },
-						{ urls: "stun:stun2.l.google.com:19302" },
-						{ urls: "stun:stun3.l.google.com:19302" },
-						{
-							urls:"relay1.expressturn.com:3480",
-							username: "000000002071101513",
-							credential: "GO5BX77ZTOpPdFZv9tW4jWT1RLQ="
-						}
-					],
+					iceServers: iceServers,
 					iceCandidatePoolSize: 10,
 				},
 				debug: 1, // Enable debug logs for troubleshooting
