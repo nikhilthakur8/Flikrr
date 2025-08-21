@@ -15,7 +15,7 @@ export const Home = () => {
 	const [peerId, setPeerId] = useState("");
 	const [isConnected, setIsConnected] = useState(false);
 	const [isSearching, setIsSearching] = useState(false);
-	const [connectionStatus, setConnectionStatus] = useState("disconnected");
+	const [connectionStatus, setConnectionStatus] = useState("disconnected"); // disconnected, searching, connected
 
 	// Initialize media and peer connection
 	const getLocalStream = useCallback(async () => {
@@ -55,6 +55,20 @@ export const Home = () => {
 					console.error("Call error:", error);
 					toast.error("Failed to establish video connection");
 				});
+
+				// Monitor connection quality
+				if (call.peerConnection) {
+					call.peerConnection.oniceconnectionstatechange = () => {
+						console.log("ICE connection state:", call.peerConnection.iceConnectionState);
+						if (call.peerConnection.iceConnectionState === "failed") {
+							toast.error("Connection failed - trying to reconnect...");
+						} else if (call.peerConnection.iceConnectionState === "disconnected") {
+							toast.warning("Connection lost - attempting to reconnect...");
+						} else if (call.peerConnection.iceConnectionState === "connected") {
+							toast.success("Video connection established!");
+						}
+					};
+				}
 			} catch (error) {
 				console.error("Error calling peer:", error);
 				toast.error("Failed to connect: " + error.message);
@@ -64,6 +78,8 @@ export const Home = () => {
 	);
 
 	const handlePartnerLeft = useCallback(() => {
+		console.log("Partner left");
+
 		// Close current call
 		if (currentCallRef.current) {
 			currentCallRef.current.close();
@@ -75,23 +91,21 @@ export const Home = () => {
 		setConnectionStatus("disconnected");
 		setIsSearching(false);
 
-		// Now request for New Search
-		startSearch();
-
 		toast.info("Your partner has disconnected");
 	}, []);
 
 	const startSearch = useCallback(() => {
-		if (!socketRef.current || !peerRef.current) {
+		if (!socketRef.current || !peerId) {
 			toast.error("Please wait for connection to initialize");
 			return;
 		}
 
+		console.log("Starting search for peer");
 		setConnectionStatus("searching");
 		setIsSearching(true);
-
+		
 		socketRef.current.emit("findPeer", { peerId });
-	}, [peerId, peerRef]);
+	}, [peerId]);
 
 	const initializePeer = useCallback(async () => {
 		try {
@@ -110,7 +124,10 @@ export const Home = () => {
 
 			try {
 				const response = await fetch(
-					`${import.meta.env.VITE_BACKEND_URL}/api/ice-servers`
+					`${
+						import.meta.env.VITE_BACKEND_URL ||
+						"http://localhost:3001"
+					}/api/ice-servers`
 				);
 				const data = await response.json();
 				if (data.iceServers && data.iceServers.length > 0) {
@@ -136,31 +153,51 @@ export const Home = () => {
 
 			peer.on("open", (id) => {
 				setPeerId(id);
+				console.log("Peer ID:", id);
+
 				// Initialize Socket.io connection
-				const socket = io(import.meta.env.VITE_BACKEND_URL);
+				const socket = io(
+					import.meta.env.VITE_BACKEND_URL || "http://localhost:3001"
+				);
 				socketRef.current = socket;
 
 				// Socket event listeners
 				socket.on("connect", () => {
-					// On Connection Get the Ice servers from backend
+					console.log("Connected to server");
+					// Request ICE servers via socket as backup
 					socket.emit("getICEServers");
 				});
 
+				socket.on("iceServers", (data) => {
+					console.log(
+						"Received ICE servers via socket:",
+						data.iceServers
+					);
+					// Update peer configuration if needed (for future connections)
+				});
+
+				socket.on("searchingForPeer", () => {
+					setConnectionStatus("searching");
+					setIsSearching(true);
+					setIsConnected(false);
+					toast.info("Looking for someone to chat with...");
+				});
+
 				socket.on("peerMatched", async (data) => {
+					console.log("Matched with peer:", data);
 					setConnectionStatus("connected");
 					setIsSearching(false);
 					setIsConnected(true);
-					toast.success("Connected! Successfully");
+					toast.success("Connected! Say hi!");
 
 					if (data.shouldInitiateCall) {
-						// Call the Peer Now
+						// This user should initiate the call
 						await callPeer(data.partnerPeerId);
 					}
 				});
 
 				socket.on("partnerLeft", () => {
-					console.log("Partner left the chat");
-					handlePartnerLeft(socket);
+					handlePartnerLeft();
 				});
 
 				socket.on("disconnect", () => {
@@ -193,29 +230,16 @@ export const Home = () => {
 					console.error("Call error:", error);
 					toast.error("Connection error occurred");
 				});
+
+				// Monitor connection quality for incoming calls too
 				if (call.peerConnection) {
 					call.peerConnection.oniceconnectionstatechange = () => {
-						console.log(
-							"ICE connection state:",
-							call.peerConnection.iceConnectionState
-						);
-						if (
-							call.peerConnection.iceConnectionState === "failed"
-						) {
-							toast.error(
-								"Connection failed - trying to reconnect..."
-							);
-						} else if (
-							call.peerConnection.iceConnectionState ===
-							"disconnected"
-						) {
-							toast.warning(
-								"Connection lost - attempting to reconnect..."
-							);
-						} else if (
-							call.peerConnection.iceConnectionState ===
-							"connected"
-						) {
+						console.log("ICE connection state:", call.peerConnection.iceConnectionState);
+						if (call.peerConnection.iceConnectionState === "failed") {
+							toast.error("Connection failed - trying to reconnect...");
+						} else if (call.peerConnection.iceConnectionState === "disconnected") {
+							toast.warning("Connection lost - attempting to reconnect...");
+						} else if (call.peerConnection.iceConnectionState === "connected") {
 							toast.success("Video connection established!");
 						}
 					};
@@ -225,19 +249,12 @@ export const Home = () => {
 			peer.on("error", (error) => {
 				console.error("PeerJS error:", error);
 				if (error.type === "network") {
-					toast.error(
-						"Network error - check your internet connection"
-					);
+					toast.error("Network error - check your internet connection");
 				} else if (error.type === "peer-unavailable") {
-					toast.error(
-						"Partner is not available - trying to reconnect"
-					);
+					toast.error("Partner is not available - trying to reconnect");
 					// Try to find a new peer
 					setTimeout(() => {
-						if (
-							socketRef.current &&
-							connectionStatus === "connected"
-						) {
+						if (socketRef.current && connectionStatus === "connected") {
 							socketRef.current.emit("skipPeer");
 							setTimeout(() => startSearch(), 1000);
 						}
@@ -253,13 +270,7 @@ export const Home = () => {
 			toast.error("Failed to initialize connection");
 			return false;
 		}
-	}, [
-		getLocalStream,
-		callPeer,
-		handlePartnerLeft,
-		startSearch,
-		connectionStatus,
-	]);
+	}, [getLocalStream, callPeer, handlePartnerLeft, startSearch, connectionStatus]);
 
 	function skipPeer() {
 		if (!socketRef.current) return;
@@ -287,7 +298,10 @@ export const Home = () => {
 			currentCallRef.current = null;
 		}
 
-		socketRef.current.emit("stopConnection");
+		if (socketRef.current) {
+			socketRef.current.emit("skipPeer");
+		}
+
 		setRemoteStream(null);
 		setIsConnected(false);
 		setConnectionStatus("disconnected");
@@ -298,6 +312,7 @@ export const Home = () => {
 		initializePeer();
 
 		return () => {
+			// Cleanup on unmount
 			if (currentCallRef.current) {
 				currentCallRef.current.close();
 			}
@@ -307,7 +322,9 @@ export const Home = () => {
 			if (socketRef.current) {
 				socketRef.current.disconnect();
 			}
+			// Don't access localStream in cleanup as it's part of state
 		};
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	const getStatusText = () => {
@@ -324,188 +341,110 @@ export const Home = () => {
 	const nodeRef = useRef(null);
 
 	return (
-		<div className="flex h-screen flex-col overflow-hidden bg-gray-50">
-			{/* Mobile Layout */}
-			<div className="md:hidden flex flex-col h-full">
-				{/* Remote video - full screen on mobile */}
-				<div className="flex-1 relative bg-gray-50 rounded-b-xl overflow-hidden shadow-md">
+		<div className="flex h-screen flex-col md:flex-row bg-gray-50">
+			{/* Left panel - Remote video */}
+			<div className="flex-1 h-full border border-gray-900 flex flex-col gap-6 items-center justify-center p-6 bg-white shadow-md">
+				{/* Video container */}
+				<div className="flex-1 w-full min-h-0">
 					{remoteStream ? (
-						<VideoTile
-							videoRef={remoteStream}
-							containerClassName="absolute inset-0 w-full h-full object-cover rounded-b-xl"
-						/>
+						<VideoTile videoRef={remoteStream} />
 					) : (
-						<div className="absolute inset-0 flex flex-col items-center justify-center bg-gray-800 ">
-							<div className="text-center text-gray-300 px-4">
-								<div className="text-lg font-semibold">
-									{getStatusText()}
+						<div className="flex-1 w-full h-full flex items-center justify-center bg-gray-200 rounded-xl">
+							<div className="text-center text-gray-600">
+								<div className="text-lg font-semibold mb-2">
+									{connectionStatus === "searching"
+										? "🔍"
+										: connectionStatus === "connected"
+										? "📹"
+										: "👋"}
 								</div>
+								<div>{getStatusText()}</div>
 								{isSearching && (
-									<div className="mt-4">
-										<div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
+									<div className="mt-2">
+										<div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
 									</div>
 								)}
 							</div>
 						</div>
 					)}
-
-					{/* Local video overlay - draggable */}
-					{localStream && (
-						<Draggable nodeRef={nodeRef} bounds="parent">
-							<div
-								ref={nodeRef}
-								className="absolute top-4 right-4 w-28 h-36 z-1000 cursor-move"
-							>
-								<VideoTile
-									videoRef={localStream}
-									containerClassName="w-full h-full border-2 border-gray-500 shadow-xl rounded-lg"
-									muted={true}
-									mirror={true}
-								/>
-							</div>
-						</Draggable>
-					)}
 				</div>
 
-				{/* Mobile control panel */}
-				<div className="bg-white border-t border-gray-200 p-4 safe-area-bottom shadow-inner">
-					{/* Buttons */}
-					<div className="flex justify-center items-center gap-3 mb-4">
-						{connectionStatus === "disconnected" && (
-							<button
-								className="px-5 py-3 bg-green-600 hover:bg-green-700 active:bg-green-800 transition text-white font-semibold rounded-2xl shadow-md focus:outline-none focus:ring-2 focus:ring-green-400 text-lg"
-								onClick={startSearch}
-								disabled={!peerId}
-							>
-								Start
-							</button>
-						)}
+				{/* Control buttons */}
+				<div className="w-full h-36 flex justify-center items-center gap-4 rounded-xl bg-gray-100 shadow-inner">
+					{connectionStatus === "disconnected" && (
+						<button
+							className="px-8 py-3 bg-green-600 hover:bg-green-700 transition text-white font-semibold rounded-xl shadow-md focus:outline-none focus:ring-2 focus:ring-green-400"
+							type="button"
+							onClick={startSearch}
+							disabled={!peerId}
+						>
+							🚀 Start
+						</button>
+					)}
 
-						{connectionStatus === "searching" && (
+					{connectionStatus === "searching" && (
+						<button
+							className="px-8 py-3 bg-red-600 hover:bg-red-700 transition text-white font-semibold rounded-xl shadow-md focus:outline-none focus:ring-2 focus:ring-red-400"
+							type="button"
+							onClick={stopConnection}
+						>
+							❌ Stop
+						</button>
+					)}
+
+					{connectionStatus === "connected" && (
+						<>
 							<button
-								className="px-5 py-3 bg-red-600 hover:bg-red-700 active:bg-red-800 transition text-white font-semibold rounded-2xl shadow-md focus:outline-none focus:ring-2 focus:ring-red-400 text-lg"
+								className="px-6 py-3 bg-blue-600 hover:bg-blue-700 transition text-white font-semibold rounded-xl shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400"
+								type="button"
+								onClick={skipPeer}
+							>
+								⏭️ Next
+							</button>
+							<button
+								className="px-6 py-3 bg-red-600 hover:bg-red-700 transition text-white font-semibold rounded-xl shadow-md focus:outline-none focus:ring-2 focus:ring-red-400"
+								type="button"
 								onClick={stopConnection}
 							>
-								Stop
+								❌ Stop
 							</button>
-						)}
-
-						{connectionStatus === "connected" && (
-							<>
-								<button
-									className="px-5 py-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 transition text-white font-semibold rounded-2xl shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400 text-lg"
-									onClick={skipPeer}
-								>
-									Next
-								</button>
-								<button
-									className="px-5 py-3 bg-red-600 hover:bg-red-700 active:bg-red-800 transition text-white font-semibold rounded-2xl shadow-md focus:outline-none focus:ring-2 focus:ring-red-400 text-lg"
-									onClick={stopConnection}
-								>
-									Stop
-								</button>
-							</>
-						)}
-					</div>
-
-					{/* Chat */}
-					<div className="h-40 overflow-y-auto rounded-lg border border-gray-200 shadow-inner">
-						<Chat
-							socket={socketRef.current}
-							isConnected={isConnected}
-						/>
-					</div>
+						</>
+					)}
 				</div>
 			</div>
 
-			{/* Desktop Layout */}
-			<div className="hidden md:flex md:flex-row h-full gap-4 p-4">
-				{/* Left - Remote Video */}
-				<div className="flex-1 flex flex-col bg-white shadow-lg rounded-xl border border-gray-200 p-4">
-					<div className="flex-1 w-full min-h-0 rounded-xl overflow-hidden">
-						{remoteStream ? (
-							<VideoTile videoRef={remoteStream} />
-						) : (
-							<div className="flex-1 w-full h-full flex items-center justify-center bg-gray-100 rounded-xl">
-								<div className="text-center text-gray-500">
-									<div>{getStatusText()}</div>
-									{isSearching && (
-										<div className="mt-2">
-											<div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mx-auto"></div>
-										</div>
-									)}
-								</div>
+			{/* Right panel - Local video and chat */}
+			<div className="flex-1 h-full border border-gray-900 flex flex-col gap-6 items-center justify-center p-6 bg-white shadow-md">
+				{/* Local video - desktop */}
+				<div className="hidden md:block flex-1 h-full w-full min-h-0">
+					{localStream ? (
+						<VideoTile videoRef={localStream} muted={true} />
+					) : (
+						<div className="flex-1 w-full h-full flex items-center justify-center bg-gray-200 rounded-xl">
+							<div className="text-center text-gray-600">
+								<div className="text-lg mb-2">📷</div>
+								<div>Your camera will appear here</div>
 							</div>
-						)}
-					</div>
-
-					{/* Control Buttons */}
-					<div className="flex justify-center items-center gap-4 mt-4">
-						{connectionStatus === "disconnected" && (
-							<button
-								className="px-6 py-3 bg-green-600 hover:bg-green-700 transition text-white font-semibold rounded-2xl shadow-md focus:outline-none focus:ring-2 focus:ring-green-400"
-								onClick={startSearch}
-								disabled={!peerId}
-							>
-								Start
-							</button>
-						)}
-						{connectionStatus === "searching" && (
-							<button
-								className="px-6 py-3 bg-red-600 hover:bg-red-700 transition text-white font-semibold rounded-2xl shadow-md focus:outline-none focus:ring-2 focus:ring-red-400"
-								onClick={stopConnection}
-							>
-								Stop
-							</button>
-						)}
-						{connectionStatus === "connected" && (
-							<>
-								<button
-									className="px-6 py-3 bg-blue-600 hover:bg-blue-700 transition text-white font-semibold rounded-2xl shadow-md focus:outline-none focus:ring-2 focus:ring-blue-400"
-									onClick={skipPeer}
-								>
-									Next
-								</button>
-								<button
-									className="px-6 py-3 bg-red-600 hover:bg-red-700 transition text-white font-semibold rounded-2xl shadow-md focus:outline-none focus:ring-2 focus:ring-red-400"
-									onClick={stopConnection}
-								>
-									Stop
-								</button>
-							</>
-						)}
-					</div>
+						</div>
+					)}
 				</div>
 
-				{/* Right - Local Video & Chat */}
-				<div className="flex-1 flex flex-col bg-white shadow-lg rounded-xl border border-gray-200 p-4 gap-4">
-					{/* Local Video */}
-					<div className="flex-1 w-full min-h-0 rounded-xl overflow-hidden">
-						{localStream ? (
-							<VideoTile
-								videoRef={localStream}
-								muted
-								mirror
-								containerClassName="rounded-xl"
+				{/* Local video - mobile (draggable) */}
+				{localStream && (
+					<Draggable nodeRef={nodeRef}>
+						<div
+							ref={nodeRef}
+							className="md:hidden absolute bottom-4 right-4 w-32 h-24 z-10"
+						>
+							<VideoTile 
+								videoRef={localStream} 
+								containerClassName="w-full h-full border-2 border-white shadow-lg" 
+								muted={true}
 							/>
-						) : (
-							<div className="flex-1 w-full h-full flex items-center justify-center bg-gray-100 rounded-xl">
-								<div className="text-center text-gray-500">
-									<div className="text-lg mb-2">📷</div>
-									<div>Your camera will appear here</div>
-								</div>
-							</div>
-						)}
-					</div>
-
-					{/* Chat */}
-					<div className="h-80 overflow-y-auto rounded-lg border border-gray-200 shadow-inner">
-						<Chat
-							socket={socketRef.current}
-							isConnected={isConnected}
-						/>
-					</div>
-				</div>
+						</div>
+					</Draggable>
+				)}				{/* Chat component */}
+				<Chat socket={socketRef.current} isConnected={isConnected} />
 			</div>
 		</div>
 	);
