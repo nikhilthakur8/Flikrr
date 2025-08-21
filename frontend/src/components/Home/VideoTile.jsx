@@ -1,49 +1,57 @@
+// VideoTile.jsx
 import React, { useEffect, useRef } from "react";
 
 export const VideoTile = ({
-	videoRef,
-	containerClassName,
+	stream, // MediaStream
+	containerClassName = "",
 	muted = false,
 	mirror = false,
-	...props
+	autoPlay = true,
 }) => {
-	const localRef = useRef(null);
+	const videoRef = useRef(null);
 
 	useEffect(() => {
-		if (videoRef && localRef.current) {
-			localRef.current.srcObject = videoRef;
+		const video = videoRef.current;
+		if (!video) return;
 
-			const playPromise = localRef.current.play();
-			if (playPromise !== undefined) {
-				playPromise.catch((err) => {
-					console.warn("Video autoplay failed:", err);
-				});
+		if (stream && typeof stream === "object") {
+			try {
+				video.srcObject = stream;
+				const playPromise = video.play();
+				if (playPromise && playPromise.catch) {
+					playPromise.catch((err) => {
+						// Not fatal — browser may require user gesture
+						console.warn("video.play() failed:", err);
+					});
+				}
+			} catch (err) {
+				console.error("Error attaching stream to video:", err);
 			}
+		} else {
+			video.srcObject = null;
 		}
-	}, [videoRef]);
+
+		return () => {
+			try {
+				if (video && video.srcObject) video.srcObject = null;
+			} catch (e) {}
+		};
+	}, [stream]);
 
 	return (
-		<div
-			className={`flex-1 w-full h-full min-h-0 ${
-				containerClassName || ""
-			}`}
-			{...props}
-		>
+		<div className={containerClassName}>
 			<video
-				ref={localRef}
-				className="w-full h-full object-cover rounded-xl"
-				autoPlay
-				playsInline
+				ref={videoRef}
 				muted={muted}
-				controls={false}
-				style={
-					mirror
-						? {
-								WebkitTransform: "scaleX(-1)",
-								transform: "scaleX(-1)",
-						  }
-						: {}
-				}
+				playsInline
+				autoPlay={autoPlay}
+				style={{
+					width: "100%",
+					height: "100%",
+					objectFit: "cover",
+					transform: mirror ? "scaleX(-1)" : "none",
+					borderRadius: 8,
+				}}
 			/>
 		</div>
 	);
