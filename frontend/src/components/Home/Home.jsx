@@ -41,6 +41,15 @@ export const Home = () => {
 				const call = peerRef.current.call(peerId, stream);
 				currentCallRef.current = call;
 
+				// Monitor ICE connection state for debugging
+				call.peerConnection.oniceconnectionstatechange = () => {
+					console.log("ICE connection state:", call.peerConnection.iceConnectionState);
+					if (call.peerConnection.iceConnectionState === 'failed') {
+						console.error("ICE connection failed - may need TURN servers");
+						toast.error("Connection failed - check network settings");
+					}
+				};
+
 				call.on("stream", (remoteStream) => {
 					console.log("Remote stream received from:", peerId);
 					setRemoteStream(remoteStream);
@@ -75,11 +84,15 @@ export const Home = () => {
 		setConnectionStatus("disconnected");
 		setIsSearching(false);
 
-		// Now request for New Search
-		startSearch();
-
 		toast.info("Your partner has disconnected");
-	}, []);
+
+		// Wait a moment then automatically search for new partner
+		setTimeout(() => {
+			if (socketRef.current && peerId) {
+				startSearch();
+			}
+		}, 1000);
+	}, [peerId, startSearch]);
 
 	const startSearch = useCallback(() => {
 		if (!socketRef.current || !peerRef.current) {
@@ -112,11 +125,12 @@ export const Home = () => {
 				const response = await fetch(
 					`${
 						import.meta.env.VITE_BACKEND_URL ||
-						"http://localhost:3001"
-					}/ice-servers`
+						"http://localhost:3000"
+					}/api/ice-servers`
 				);
 				const data = await response.json();
 				if (data.iceServers && data.iceServers.length > 0) {
+					// Use all servers from backend (includes both STUN and TURN)
 					iceServers = data.iceServers;
 					console.log("Using ICE servers from backend:", iceServers);
 				}
@@ -132,6 +146,9 @@ export const Home = () => {
 				config: {
 					iceServers: iceServers,
 					iceCandidatePoolSize: 10,
+					iceTransportPolicy: 'all', // Allow both STUN and TURN
+					bundlePolicy: 'max-bundle',
+					rtcpMuxPolicy: 'require'
 				},
 				debug: 1, // Enable debug logs for troubleshooting
 			});
@@ -141,7 +158,7 @@ export const Home = () => {
 				setPeerId(id);
 				// Initialize Socket.io connection
 				const socket = io(
-					import.meta.env.VITE_BACKEND_URL || "http://localhost:3001"
+					import.meta.env.VITE_BACKEND_URL || "http://localhost:3000"
 				);
 				socketRef.current = socket;
 
@@ -181,6 +198,15 @@ export const Home = () => {
 				console.log("Incoming call from:", call.peer);
 				currentCallRef.current = call;
 
+				// Monitor ICE connection state for incoming calls
+				call.peerConnection.oniceconnectionstatechange = () => {
+					console.log("ICE connection state (incoming):", call.peerConnection.iceConnectionState);
+					if (call.peerConnection.iceConnectionState === 'failed') {
+						console.error("ICE connection failed - may need TURN servers");
+						toast.error("Connection failed - check network settings");
+					}
+				};
+
 				const stream = await getLocalStream();
 				call.answer(stream);
 
@@ -198,33 +224,6 @@ export const Home = () => {
 					console.error("Call error:", error);
 					toast.error("Connection error occurred");
 				});
-				if (call.peerConnection) {
-					call.peerConnection.oniceconnectionstatechange = () => {
-						console.log(
-							"ICE connection state:",
-							call.peerConnection.iceConnectionState
-						);
-						if (
-							call.peerConnection.iceConnectionState === "failed"
-						) {
-							toast.error(
-								"Connection failed - trying to reconnect..."
-							);
-						} else if (
-							call.peerConnection.iceConnectionState ===
-							"disconnected"
-						) {
-							toast.warning(
-								"Connection lost - attempting to reconnect..."
-							);
-						} else if (
-							call.peerConnection.iceConnectionState ===
-							"connected"
-						) {
-							toast.success("Video connection established!");
-						}
-					};
-				}
 			});
 
 			peer.on("error", (error) => {
@@ -313,7 +312,7 @@ export const Home = () => {
 				socketRef.current.disconnect();
 			}
 		};
-	}, []);
+	}, [initializePeer]);
 
 	const getStatusText = () => {
 		switch (connectionStatus) {
