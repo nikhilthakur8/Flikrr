@@ -118,7 +118,6 @@ export const Home = () => {
 				const data = await response.json();
 				if (data.iceServers && data.iceServers.length > 0) {
 					iceServers = data.iceServers;
-					console.log("Using ICE servers from backend:", iceServers);
 				}
 			} catch (error) {
 				console.log(
