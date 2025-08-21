@@ -55,61 +55,6 @@ export const Home = () => {
 					console.error("Call error:", error);
 					toast.error("Failed to establish video connection");
 				});
-
-				// Enhanced connection monitoring for cross-network calls
-				if (call.peerConnection) {
-					call.peerConnection.oniceconnectionstatechange = () => {
-						const state = call.peerConnection.iceConnectionState;
-						console.log("ICE connection state:", state);
-						
-						switch (state) {
-							case "checking":
-								console.log("Checking connectivity...");
-								break;
-							case "connected":
-								toast.success("Video connection established!");
-								break;
-							case "completed":
-								console.log("Connection fully established");
-								break;
-							case "failed":
-								console.error("ICE connection failed");
-								toast.error("Connection failed - network issues detected");
-								// Attempt to restart ICE
-								if (call.peerConnection.restartIce) {
-									console.log("Attempting to restart ICE...");
-									call.peerConnection.restartIce();
-								}
-								break;
-							case "disconnected":
-								console.warn("ICE connection disconnected");
-								toast.warning("Connection lost - attempting to reconnect...");
-								break;
-							case "closed":
-								console.log("ICE connection closed");
-								break;
-						}
-					};
-
-					// Monitor ICE gathering
-					call.peerConnection.onicegatheringstatechange = () => {
-						console.log("ICE gathering state:", call.peerConnection.iceGatheringState);
-					};
-
-					// Log ICE candidates for debugging
-					call.peerConnection.onicecandidate = (event) => {
-						if (event.candidate) {
-							console.log("ICE candidate:", {
-								type: event.candidate.type,
-								protocol: event.candidate.protocol,
-								address: event.candidate.address,
-								port: event.candidate.port
-							});
-						} else {
-							console.log("ICE gathering completed");
-						}
-					};
-				}
 			} catch (error) {
 				console.error("Error calling peer:", error);
 				toast.error("Failed to connect: " + error.message);
@@ -129,6 +74,9 @@ export const Home = () => {
 		setIsConnected(false);
 		setConnectionStatus("disconnected");
 		setIsSearching(false);
+
+		// Now request for New Search
+		startSearch();
 
 		toast.info("Your partner has disconnected");
 	}, []);
@@ -175,22 +123,13 @@ export const Home = () => {
 				);
 			}
 
-			// Initialize PeerJS with enhanced ICE servers configuration for cross-network connectivity
+			// Initialize PeerJS with ICE servers configuration
 			const peer = new Peer(undefined, {
 				config: {
 					iceServers: iceServers,
 					iceCandidatePoolSize: 10,
-					// Enhanced configuration for better NAT traversal
-					iceTransportPolicy: 'all', // Use both STUN and TURN
-					bundlePolicy: 'balanced',
-					rtcpMuxPolicy: 'require',
-					// Force relay (TURN) for better cross-network connectivity
-					// iceTransportPolicy: 'relay' // Uncomment this line if still having issues
 				},
-				debug: 2, // Increased debug level for better troubleshooting
-				// Add connection timeout and retry logic
-				pingInterval: 5000,
-				timeout: 30000,
+				debug: 1, // Enable debug logs for troubleshooting
 			});
 			peerRef.current = peer;
 
@@ -222,13 +161,7 @@ export const Home = () => {
 
 				socket.on("partnerLeft", () => {
 					console.log("Partner left the chat");
-					handlePartnerLeft();
-					// Automatically start searching for a new partner after a short delay
-					setTimeout(() => {
-						if (socketRef.current && peerRef.current) {
-							startSearch();
-						}
-					}, 1000);
+					handlePartnerLeft(socket);
 				});
 
 				socket.on("disconnect", () => {
@@ -239,7 +172,7 @@ export const Home = () => {
 				});
 			});
 
-			// Handle incoming calls with enhanced connection monitoring
+			// Handle incoming calls
 			peer.on("call", async (call) => {
 				console.log("Incoming call from:", call.peer);
 				currentCallRef.current = call;
@@ -261,58 +194,30 @@ export const Home = () => {
 					console.error("Call error:", error);
 					toast.error("Connection error occurred");
 				});
-
-				// Enhanced connection monitoring for incoming calls
 				if (call.peerConnection) {
 					call.peerConnection.oniceconnectionstatechange = () => {
-						const state = call.peerConnection.iceConnectionState;
-						console.log("ICE connection state:", state);
-						
-						switch (state) {
-							case "checking":
-								console.log("Checking connectivity...");
-								break;
-							case "connected":
-								toast.success("Video connection established!");
-								break;
-							case "completed":
-								console.log("Connection fully established");
-								break;
-							case "failed":
-								console.error("ICE connection failed");
-								toast.error("Connection failed - network issues detected");
-								// Attempt to restart ICE
-								if (call.peerConnection.restartIce) {
-									console.log("Attempting to restart ICE...");
-									call.peerConnection.restartIce();
-								}
-								break;
-							case "disconnected":
-								console.warn("ICE connection disconnected");
-								toast.warning("Connection lost - attempting to reconnect...");
-								break;
-							case "closed":
-								console.log("ICE connection closed");
-								break;
-						}
-					};
-
-					// Monitor ICE gathering
-					call.peerConnection.onicegatheringstatechange = () => {
-						console.log("ICE gathering state:", call.peerConnection.iceGatheringState);
-					};
-
-					// Log ICE candidates for debugging
-					call.peerConnection.onicecandidate = (event) => {
-						if (event.candidate) {
-							console.log("ICE candidate:", {
-								type: event.candidate.type,
-								protocol: event.candidate.protocol,
-								address: event.candidate.address,
-								port: event.candidate.port
-							});
-						} else {
-							console.log("ICE gathering completed");
+						console.log(
+							"ICE connection state:",
+							call.peerConnection.iceConnectionState
+						);
+						if (
+							call.peerConnection.iceConnectionState === "failed"
+						) {
+							toast.error(
+								"Connection failed - trying to reconnect..."
+							);
+						} else if (
+							call.peerConnection.iceConnectionState ===
+							"disconnected"
+						) {
+							toast.warning(
+								"Connection lost - attempting to reconnect..."
+							);
+						} else if (
+							call.peerConnection.iceConnectionState ===
+							"connected"
+						) {
+							toast.success("Video connection established!");
 						}
 					};
 				}
@@ -404,7 +309,7 @@ export const Home = () => {
 				socketRef.current.disconnect();
 			}
 		};
-	}, [initializePeer]);
+	}, []);
 
 	const getStatusText = () => {
 		switch (connectionStatus) {
