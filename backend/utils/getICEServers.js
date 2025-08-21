@@ -1,25 +1,10 @@
-let iceServers = null;
-let iceServersLastFetch = 0;
-const ICE_SERVERS_CACHE_DURATION = 3600000;
 const https = require("https");
 
 async function getICEServers() {
 	return new Promise((resolve, reject) => {
-		// Check if we have cached servers that are still valid
-		const now = Date.now();
-		if (
-			iceServers &&
-			now - iceServersLastFetch < ICE_SERVERS_CACHE_DURATION
-		) {
-			resolve(iceServers);
-			return;
-		}
-
-		let o = {
-			format: "urls",
-		};
-
+		let o = { format: "urls" };
 		let bodyString = JSON.stringify(o);
+
 		let options = {
 			host: "global.xirsys.net",
 			path: "/_turn/MyFirstApp",
@@ -37,10 +22,10 @@ async function getICEServers() {
 
 		let httpreq = https.request(options, function (httpres) {
 			let str = "";
-			httpres.on("data", function (data) {
+			httpres.on("data", (data) => {
 				str += data;
 			});
-			httpres.on("end", function () {
+			httpres.on("end", () => {
 				try {
 					const response = JSON.parse(str);
 					if (
@@ -48,54 +33,44 @@ async function getICEServers() {
 						response.v &&
 						response.v.iceServers
 					) {
-						iceServers = response.v.iceServers;
-						iceServersLastFetch = now;
-						resolve(iceServers);
+						resolve(response.v.iceServers);
 					} else {
-						// Fallback to public STUN servers
 						console.log("Using fallback STUN servers");
-						iceServers = [
+						resolve([
 							{ urls: "stun:stun.l.google.com:19302" },
 							{ urls: "stun:stun1.l.google.com:19302" },
 							{ urls: "stun:stun2.l.google.com:19302" },
 							{ urls: "stun:stun3.l.google.com:19302" },
-						];
-						iceServersLastFetch = now;
-						resolve(iceServers);
+						]);
 					}
 				} catch (parseError) {
 					console.log(
-						"Error parsing ICE servers response: ",
+						"Error parsing ICE servers response:",
 						parseError
 					);
-					// Fallback to public STUN servers
-					iceServers = [
+					resolve([
 						{ urls: "stun:stun.l.google.com:19302" },
 						{ urls: "stun:stun1.l.google.com:19302" },
 						{ urls: "stun:stun2.l.google.com:19302" },
 						{ urls: "stun:stun3.l.google.com:19302" },
-					];
-					iceServersLastFetch = now;
-					resolve(iceServers);
+					]);
 				}
 			});
 		});
-		httpreq.on("error", function (e) {
-			console.log("Request error: ", e);
-			iceServers = [
+
+		httpreq.on("error", (e) => {
+			console.log("Request error:", e);
+			resolve([
 				{ urls: "stun:stun.l.google.com:19302" },
 				{ urls: "stun:stun1.l.google.com:19302" },
 				{ urls: "stun:stun2.l.google.com:19302" },
 				{ urls: "stun:stun3.l.google.com:19302" },
-			];
-			iceServersLastFetch = now;
-			resolve(iceServers);
+			]);
 		});
+
 		httpreq.write(bodyString);
 		httpreq.end();
 	});
 }
 
-module.exports = {
-	getICEServers,
-};
+module.exports = { getICEServers };
