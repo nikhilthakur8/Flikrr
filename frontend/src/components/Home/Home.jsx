@@ -104,6 +104,8 @@ export const Home = () => {
 			let iceServers = [
 				{ urls: "stun:stun.l.google.com:19302" },
 				{ urls: "stun:stun1.l.google.com:19302" },
+				{ urls: "stun:stun2.l.google.com:19302" },
+				{ urls: "stun:stun3.l.google.com:19302" },
 			];
 
 			try {
@@ -196,6 +198,33 @@ export const Home = () => {
 					console.error("Call error:", error);
 					toast.error("Connection error occurred");
 				});
+				if (call.peerConnection) {
+					call.peerConnection.oniceconnectionstatechange = () => {
+						console.log(
+							"ICE connection state:",
+							call.peerConnection.iceConnectionState
+						);
+						if (
+							call.peerConnection.iceConnectionState === "failed"
+						) {
+							toast.error(
+								"Connection failed - trying to reconnect..."
+							);
+						} else if (
+							call.peerConnection.iceConnectionState ===
+							"disconnected"
+						) {
+							toast.warning(
+								"Connection lost - attempting to reconnect..."
+							);
+						} else if (
+							call.peerConnection.iceConnectionState ===
+							"connected"
+						) {
+							toast.success("Video connection established!");
+						}
+					};
+				}
 			});
 
 			peer.on("error", (error) => {
