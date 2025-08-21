@@ -107,22 +107,37 @@ export const Home = () => {
 				const response = await fetch(
 					`${
 						import.meta.env.VITE_BACKEND_URL ||
-						"http://localhost:3001"
+						"http://localhost:3000"
 					}/api/ice-servers`
 				);
 				const data = await response.json();
 				if (data.iceServers && data.iceServers.length > 0) {
-					iceServers = data.iceServers;
-					console.log("Using ICE servers from backend:", iceServers);
+					// Format ICE servers correctly
+					iceServers = data.iceServers.map((server) => {
+						// Handle the TURN server configuration specifically
+						if (server.urls instanceof Array) {
+							return {
+								urls: server.urls,
+								username: server.username || "",
+								credential: server.credential || "",
+							};
+						}
+						return server;
+					});
+				} else {
+					// Fallback to Google STUN servers
+					iceServers = [
+						{ urls: "stun:stun.l.google.com:19302" },
+						{ urls: "stun:stun1.l.google.com:19302" },
+					];
+					console.log("Using fallback STUN servers");
 				}
-				console.log("ICE servers initialized:", iceServers);
 			} catch (error) {
 				console.log(
 					"Failed to get ICE servers from backend, using fallback:",
 					error
 				);
 			}
-
 			// Initialize PeerJS with ICE servers configuration
 			const peer = new Peer(undefined, {
 				config: {
