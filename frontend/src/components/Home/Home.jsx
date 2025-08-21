@@ -130,7 +130,17 @@ export const Home = () => {
 			// Initialize PeerJS with ICE servers configuration
 			const peer = new Peer(undefined, {
 				config: {
-					iceServers: iceServers,
+					iceServers: [
+						{ urls: "stun:stun.l.google.com:19302" },
+						{ urls: "stun:stun1.l.google.com:19302" },
+						{ urls: "stun:stun2.l.google.com:19302" },
+						{ urls: "stun:stun3.l.google.com:19302" },
+						{
+							urls:"relay1.expressturn.com:3480",
+							username: "000000002071101513",
+							credential: "GO5BX77ZTOpPdFZv9tW4jWT1RLQ="
+						}
+					],
 					iceCandidatePoolSize: 10,
 				},
 				debug: 1, // Enable debug logs for troubleshooting
