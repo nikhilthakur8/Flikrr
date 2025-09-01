@@ -24,14 +24,14 @@ export const VideoTile = ({
 
 	return (
 		<div
-			className={`flex-1 w-full h-full min-h-0 ${
+			className={`flex-1 border border-neutral-700 overflow-hidden w-full h-full min-h-0 ${
 				containerClassName || ""
 			}`}
 			{...props}
 		>
 			<video
 				ref={localRef}
-				className="w-full h-full object-cover rounded-xl"
+				className="w-full h-full object-cover"
 				autoPlay
 				playsInline
 				muted={muted}

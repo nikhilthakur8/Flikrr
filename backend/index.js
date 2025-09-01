@@ -19,12 +19,8 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api", require("./routes/static"));
 
 server.listen(3000, () => {
-	console.log("WebRTC Server is running on port 3000");
-
 	getICEServers()
-		.then((servers) => {
-			console.log("ICE servers initialized:", servers);
-		})
+		.then((servers) => {})
 		.catch((error) => {
 			console.log("Failed to initialize ICE servers:", error);
 		});

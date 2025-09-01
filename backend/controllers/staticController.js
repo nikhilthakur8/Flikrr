@@ -3,7 +3,6 @@ const { getICEServers } = require("../utils/getICEServers");
 async function handleGetIceServers(req, res) {
 	try {
 		const serverData = await getICEServers();
-		console.log("Raw server data from Xirsys:", serverData);
 
 		// fallback servers
 		const iceServers = [

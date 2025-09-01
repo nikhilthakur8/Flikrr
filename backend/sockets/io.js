@@ -12,24 +12,6 @@ function initSocket(app) {
 
 	// Handle socket connections
 	ioInstance.on("connection", (socket) => {
-		// Handle getting ICE servers
-		// socket.on("getICEServers", async () => {
-		// 	try {
-		// 		const servers = await getICEServers();
-		// 		socket.emit("iceServers", { iceServers: servers });
-		// 	} catch (error) {
-		// 		console.error("Error getting ICE servers for socket:", error);
-		// 		socket.emit("iceServers", {
-		// 			iceServers: [
-		// 				{ urls: "stun:stun.l.google.com:19302" },
-		// 				{ urls: "stun:stun1.l.google.com:19302" },
-		// 				{ urls: "stun:stun2.l.google.com:19302" },
-		// 				{ urls: "stun:stun3.l.google.com:19302" },
-		// 			],
-		// 		});
-		// 	}
-		// });
-
 		// Handle User Joining Find Peer
 		socket.on("findPeer", (userData) => {
 			disconnectUser(socket.id);
