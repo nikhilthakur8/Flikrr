@@ -195,7 +195,6 @@ export const Home = () => {
 						) : (
 							<div className="flex-1 w-full h-full flex items-center justify-center bg-neutral-900 text-neutral-400">
 								<div className="text-center">
-									<div className="text-lg mb-2">📷</div>
 									<div>Your camera will appear here</div>
 								</div>
 							</div>
