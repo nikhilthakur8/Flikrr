@@ -37,7 +37,7 @@ export const Home = () => {
 			{/* Mobile Layout */}
 			<div className="md:hidden flex flex-col h-full">
 				{/* Remote video - full screen on mobile */}
-				<div className="flex-1 relative bg-neutral-900 overflow-hidden shadow-md border-t border-l border-r border-neutral-700">
+				<div className="flex-1 relative bg-neutral-900 overflow-hidden shadow-md ">
 					{remoteStream ? (
 						<VideoTile
 							videoRef={remoteStream}
@@ -189,11 +189,11 @@ export const Home = () => {
 				{/* Right - Local Video & Chat */}
 				<div className="flex-1 flex flex-col bg-neutral-900  border border-neutral-700 p-4 gap-4">
 					{/* Local Video */}
-					<div className="flex-1 w-full min-h-0 overflow-hidden">
+					<div className="flex-1 w-full min-h-0 overflow-hidden ">
 						{localStream ? (
 							<VideoTile videoRef={localStream} muted mirror />
 						) : (
-							<div className="flex-1 w-full h-full flex items-center justify-center bg-neutral-900 text-neutral-400">
+							<div className="flex-1 w-full h-full flex items-center justify-center bg-neutral-900 text-neutral-400 border border-neutral-700">
 								<div className="text-center">
 									<div>Your camera will appear here</div>
 								</div>
