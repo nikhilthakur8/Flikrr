@@ -11,7 +11,7 @@ export const Chat = ({ socket, isConnected }) => {
 	};
 
 	useEffect(() => {
-		scrollToBottom();
+		if (messages.length) scrollToBottom();
 	}, [messages]);
 
 	useEffect(() => {
