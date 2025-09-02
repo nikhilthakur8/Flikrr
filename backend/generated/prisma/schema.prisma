@@ -1,0 +1,30 @@
+generator client {
+  provider = "prisma-client-js"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id       Int     @id @default(autoincrement())
+  email    String  @unique
+  name     String?
+  password String
+  verified Boolean @default(false)
+
+  inviteCode InviteCode?
+}
+
+model InviteCode {
+  id        Int      @id @default(autoincrement())
+  code      String   @unique
+  userId    Int      @unique
+  user      User     @relation(fields: [userId], references: [id])
+  usedCount Int      @default(0)
+  maxUsage  Int      @default(5)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
