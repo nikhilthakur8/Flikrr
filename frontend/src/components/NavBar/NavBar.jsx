@@ -48,7 +48,7 @@ export const NavBar = () => {
 						</Link>
 					) : (
 						<InteractiveHoverButton
-							className="bg-white hidden md:flex text-black border border-neutral-700"
+							className="bg-white hidden text-sm md:flex text-black border border-neutral-700"
 							onClick={() => navigate("/register")}
 						>
 							<span>Get Started</span>
