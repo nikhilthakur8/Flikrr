@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { toast } from "sonner";
+import api from "../api/api";
 
 export const useVideoCall = () => {
 	const peerRef = useRef(null);
@@ -100,13 +101,7 @@ export const useVideoCall = () => {
 			let iceServers = [];
 
 			try {
-				const response = await fetch(
-					`${
-						import.meta.env.VITE_BACKEND_URL ||
-						"http://localhost:3000"
-					}/api/ice-servers`
-				);
-				const data = await response.json();
+				const { data } = await api.get("api/ice-servers");
 				if (data.iceServers && data.iceServers.length > 0) {
 					// Format ICE servers correctly
 					iceServers = data.iceServers.map((server) => {
