@@ -40,7 +40,9 @@ export const MainLayout = () => {
 			) : (
 				<div className="min-h-svh flex items-center justify-center bg-black text-white">
 					<Button variant="outline" asChild>
-						<Link to="/login">Login</Link>
+						<Link to={`/login?redirect_uri=${location.pathname}`}>
+							Login
+						</Link>
 					</Button>
 				</div>
 			)}

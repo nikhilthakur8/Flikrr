@@ -15,7 +15,6 @@ export const NavBar = () => {
 	const [isOpen, setIsOpen] = useState(false);
 	const navigate = useNavigate();
 	const { user } = useUserContext();
-	console.log(user);
 	return (
 		<nav className="bg-transparent fixed w-full z-[9999999] top-0 left-0 text-white shadow-md">
 			<div className="mx-auto px-4 sm:px-6 lg:px-8">
@@ -93,14 +92,12 @@ export const NavBar = () => {
 			{isOpen && (
 				<div className="md:hidden px-4 pb-4 space-y-2">
 					{navItems.map((item) => {
-						const Icon = item.icon;
 						return (
 							<a
 								key={item.label}
 								href={item.href}
 								className="flex items-center space-x-1 hover:text-neutral-400"
 							>
-								<Icon className="w-4 h-4" />
 								<span>{item.label}</span>
 							</a>
 						);
