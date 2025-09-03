@@ -33,7 +33,10 @@ const handleLogin = async (req, res, next) => {
 			inviteCode: user.inviteCode,
 		});
 		const { password: _, ...safeUser } = user;
-		res.cookie("token", token, { httpOnly: true });
+		res.cookie("token", token, {
+			httpOnly: true,
+			sameSite: "None",
+		});
 		return res.json({ message: "Login successful", token, user: safeUser });
 	} catch (err) {
 		next(err);
@@ -62,7 +65,7 @@ const handleRegister = async (req, res, next) => {
 
 		const token = signToken({ userId: newUser.id });
 		const { password: _, ...safeUser } = newUser;
-		res.cookie("token", token, { httpOnly: true });
+		res.cookie("token", token, { httpOnly: true, sameSite: "None" });
 		return res.status(201).json({
 			message: "User registered successfully",
 			token,
