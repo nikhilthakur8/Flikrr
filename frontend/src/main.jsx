@@ -15,6 +15,7 @@ import { VideoChat } from "./components/VideoChat/VideoChat.jsx";
 import { Home } from "./components/Home/Home.jsx";
 import { UserProvider } from "./Context/UserProvider.jsx";
 import { Profile } from "./components/Profile/Profile.jsx";
+import { ProtectedLayout } from "./Layouts/ProtectedLayout.jsx";
 const router = createBrowserRouter(
 	createRoutesFromElements(
 		<Route>
@@ -24,8 +25,10 @@ const router = createBrowserRouter(
 			</Route>
 			<Route path="/" element={<MainLayout />}>
 				<Route index element={<Home />} />
-				<Route path="/anonymous-call" element={<VideoChat />} />
-				<Route path="/profile" element={<Profile />} />	
+				<Route path="/" element={<ProtectedLayout />}>
+					<Route path="/anonymous-call" element={<VideoChat />} />
+					<Route path="/profile" element={<Profile />} />
+				</Route>
 			</Route>
 		</Route>
 	)

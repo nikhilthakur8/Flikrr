@@ -33,19 +33,9 @@ export const MainLayout = () => {
 			<div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white"></div>
 		</div>
 	) : (
-		<div>
+		<>
 			{!shouldHideNavBar && <NavBar />}
-			{user ? (
-				<Outlet />
-			) : (
-				<div className="min-h-svh flex items-center justify-center bg-black text-white">
-					<Button variant="outline" asChild>
-						<Link to={`/login?redirect_uri=${location.pathname}`}>
-							Login
-						</Link>
-					</Button>
-				</div>
-			)}
-		</div>
+			<Outlet />
+		</>
 	);
 };

@@ -37,7 +37,7 @@ export const Home = () => {
 					</Link>
 				) : (
 					<Link
-						to="/anonymous-call"
+						to="/login"
 						className="flex items-center gap-2"
 					>
 						Get Started

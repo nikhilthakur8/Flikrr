@@ -1,4 +1,4 @@
-import React, { use } from "react";
+import React, { use, useState } from "react";
 import { useForm } from "react-hook-form";
 import {
 	Card,
@@ -22,6 +22,7 @@ export const Login = () => {
 		formState: { errors, isSubmitting },
 		reset,
 	} = useForm();
+	const [isPasswordVisible, setIsPasswordVisible] = useState(false);
 	const { setUser } = useUserContext();
 	const [searchParams] = useSearchParams();
 	const redirectUri = searchParams.get("redirect_uri") || "/";
@@ -70,7 +71,11 @@ export const Login = () => {
 						<Input
 							label="Password"
 							placeholder="You Can't See Me"
-							type="password"
+							type={isPasswordVisible ? "text" : "password"}
+							passwordField={{
+								isPasswordVisible,
+								setIsPasswordVisible,
+							}}
 							disabled={isSubmitting}
 							className="text-base"
 							{...register("password", {
