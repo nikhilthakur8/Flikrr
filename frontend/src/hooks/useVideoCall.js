@@ -203,6 +203,7 @@ export const useVideoCall = () => {
 				call.on("error", (error) => {
 					console.error("Call error:", error);
 					toast.error("Connection error occurred");
+					skipPeer();
 				});
 				if (call.peerConnection) {
 					call.peerConnection.oniceconnectionstatechange = () => {
@@ -239,22 +240,10 @@ export const useVideoCall = () => {
 					toast.error(
 						"Network error - check your internet connection"
 					);
-					skipPeer();
 				} else if (error.type === "peer-unavailable") {
 					toast.error(
 						"Partner is not available - trying to reconnect"
 					);
-					skipPeer();
-					// Try to find a new peer
-					// setTimeout(() => {
-					// 	if (
-					// 		socketRef.current &&
-					// 		connectionStatus === "connected"
-					// 	) {
-					// 		socketRef.current.emit("skipPeer");
-					// 		setTimeout(() => startSearch(), 1000);
-					// 	}
-					// }, 2000);
 				} else {
 					toast.error("Connection error: " + error.message);
 				}
