@@ -1,3 +1,4 @@
+/* eslint-disable react-hooks/exhaustive-deps */
 import React, { useEffect, useRef, useState, useCallback } from "react";
 import { toast } from "sonner";
 import api from "../api/api";
@@ -90,10 +91,8 @@ export const useVideoCall = () => {
 
 		setConnectionStatus("searching");
 		setIsSearching(true);
-
-		socketRef.current.emit("findPeer", { peerId });
+		socketRef.current.emit("findPeer", { peerId: peerRef.current.id });
 	}, [peerId, peerRef]);
-
 	const initializePeer = useCallback(async () => {
 		try {
 			const stream = await getLocalStream();
@@ -162,7 +161,6 @@ export const useVideoCall = () => {
 					setIsSearching(false);
 					setIsConnected(true);
 					toast.success("Connected! Successfully");
-
 					if (data.shouldInitiateCall) {
 						// Call the Peer Now
 						await callPeer(data.partnerPeerId);
