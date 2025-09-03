@@ -32,16 +32,18 @@ export const MainLayout = () => {
 		<div className="flex items-center justify-center min-h-svh bg-black text-white">
 			<div className="animate-spin rounded-full h-16 w-16 border-b-2 border-white"></div>
 		</div>
-	) : user ? (
+	) : (
 		<div>
 			{!shouldHideNavBar && <NavBar />}
-			<Outlet />
-		</div>
-	) : (
-		<div className="min-h-svh flex items-center justify-center bg-black text-white">
-			<Button variant="outline" asChild>
-				<Link to="/login">Login</Link>
-			</Button>
+			{user ? (
+				<Outlet />
+			) : (
+				<div className="min-h-svh flex items-center justify-center bg-black text-white">
+					<Button variant="outline" asChild>
+						<Link to="/login">Login</Link>
+					</Button>
+				</div>
+			)}
 		</div>
 	);
 };

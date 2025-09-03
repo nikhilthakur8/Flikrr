@@ -36,6 +36,7 @@ const handleLogin = async (req, res, next) => {
 		res.cookie("token", token, {
 			httpOnly: true,
 			sameSite: "None",
+			secure: true,
 		});
 		return res.json({ message: "Login successful", token, user: safeUser });
 	} catch (err) {
@@ -65,7 +66,11 @@ const handleRegister = async (req, res, next) => {
 
 		const token = signToken({ userId: newUser.id });
 		const { password: _, ...safeUser } = newUser;
-		res.cookie("token", token, { httpOnly: true, sameSite: "None" });
+		res.cookie("token", token, {
+			httpOnly: true,
+			sameSite: "None",
+			secure: true,
+		});
 		return res.status(201).json({
 			message: "User registered successfully",
 			token,
