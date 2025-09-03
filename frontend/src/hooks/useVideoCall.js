@@ -72,6 +72,10 @@ export const useVideoCall = () => {
 		setConnectionStatus("disconnected");
 		setIsSearching(false);
 
+		if (peerRef.current && peerRef.current.disconnected) {
+			peerRef.current.reconnect();
+		}
+
 		// Now request for New Search
 		startSearch();
 
@@ -235,6 +239,7 @@ export const useVideoCall = () => {
 					toast.error(
 						"Network error - check your internet connection"
 					);
+					skipPeer();
 				} else if (error.type === "peer-unavailable") {
 					toast.error(
 						"Partner is not available - trying to reconnect"
