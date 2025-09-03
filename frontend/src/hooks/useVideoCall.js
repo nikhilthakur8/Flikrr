@@ -213,6 +213,7 @@ export const useVideoCall = () => {
 						if (
 							call.peerConnection.iceConnectionState === "failed"
 						) {
+							skipPeer();
 							toast.error(
 								"Connection failed - trying to reconnect..."
 							);
@@ -220,6 +221,7 @@ export const useVideoCall = () => {
 							call.peerConnection.iceConnectionState ===
 							"disconnected"
 						) {
+							skipPeer();
 							toast.warning(
 								"Connection lost - attempting to reconnect..."
 							);
@@ -239,7 +241,6 @@ export const useVideoCall = () => {
 					toast.error(
 						"Network error - check your internet connection"
 					);
-					skipPeer();
 				} else if (error.type === "peer-unavailable") {
 					toast.error(
 						"Partner is not available - trying to reconnect"
