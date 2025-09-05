@@ -14,7 +14,7 @@ authRouter.post("/login", handleLogin);
 authRouter.post("/register", handleRegister);
 authRouter.post("/send-otp", authenticate, handleSendEmailOTP);
 authRouter.post("/verify-otp", authenticate, handleVerifyOtp);
-authRouter.post("/logout", authenticate, handleLogout);
+authRouter.post("/logout", handleLogout);
 authRouter.use(errorHandler);
 
 module.exports = authRouter;

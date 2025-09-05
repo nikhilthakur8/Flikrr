@@ -26,6 +26,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use("/api", authenticate, require("./routes/static"));
 app.use("/auth", require("./routes/auth"));
 app.use("/user", authenticate, require("./routes/user"));
+
 server.listen(3000, () => {
 	getICEServers()
 		.then((servers) => {})

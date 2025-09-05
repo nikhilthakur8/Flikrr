@@ -7,6 +7,10 @@ function authenticate(req, res, next) {
 			return res.status(401).json({ message: "Unauthorized" });
 		}
 		const user = verifyToken(token);
+		if (!user) {
+			return res.status(401).json({ message: "Unauthorized" });
+		}
+
 		req.user = user;
 
 		next();

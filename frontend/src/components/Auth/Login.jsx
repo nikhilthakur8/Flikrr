@@ -105,9 +105,11 @@ export const Login = () => {
 						<Button
 							className="w-full border-none hover:bg-neutral-400 bg-neutral-300 !text-neutral-900 text-lg space-x-2"
 							type="button"
-							onClick={() => {
-								window.location.href = redirectUri;
-							}}
+							onClick={() =>
+								toast.warning(
+									"Men at Work use an email and password !!"
+								)
+							}
 						>
 							<img
 								src="/google.svg"

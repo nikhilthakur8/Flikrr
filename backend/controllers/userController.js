@@ -39,7 +39,7 @@ async function handleCreateInviteCode(req, res, next) {
 				.status(403)
 				.json({ message: "Only admin can create invite codes" });
 		}
-		const { id: userId } = req.user;
+		const { id: userId } = req.user;	
 
 		const { email } = req.body;
 		const existingCode = await prisma.inviteCode.findFirst({
