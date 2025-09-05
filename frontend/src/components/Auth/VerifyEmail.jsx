@@ -218,10 +218,10 @@ export const VerifyEmail = () => {
 						help, contact
 					</p>
 					<a
-						href="mailto:support@omegle.com"
+						href="mailto:support@flikrr.com"
 						className="text-blue-400 block hover:text-blue-300"
 					>
-						support@omegle.com
+						support@flikrr.com
 					</a>
 				</CardFooter>
 			</Card>

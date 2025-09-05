@@ -21,7 +21,7 @@ export const NavBar = () => {
 				<div className="flex justify-between h-16 items-center">
 					{/* Logo / Brand */}
 					<div className="text-3xl font-semibold tracking-wide">
-						Omegle
+						Flikrr
 					</div>
 
 					{/* Desktop Links */}

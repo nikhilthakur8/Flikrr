@@ -59,7 +59,7 @@ export const WaitList = () => {
 				You're on the Waitlist
 			</h1>
 			<p className="text-neutral-400 max-w-lg mx-auto text-base text-center relative z-10">
-				Omegle is a premium, invite-only platform. You can either wait
+				Flikrr is a premium, invite-only platform. You can either wait
 				or use an invite code to join.
 			</p>
 

@@ -48,7 +48,7 @@ export const Register = () => {
 			<Card className="w-md shadow-xl border rounded-none border-neutral-700 backdrop-blur">
 				<CardHeader>
 					<CardTitle className="text-2xl text-center text-white font-semibold">
-						Welcome to Omegle
+						Welcome to Flikrr
 					</CardTitle>
 					<CardDescription className="text-center text-sm text-zinc-400">
 						Join the platform to connect with others

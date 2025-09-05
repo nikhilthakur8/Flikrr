@@ -12,13 +12,13 @@ export const Home = () => {
 			<Spotlight />
 			<h1 className="md:text-5xl text-4xl font-bold bg-gradient-to-t pb-4 from-neutral-500 to-neutral-300 bg-clip-text space-y-2 relative text-transparent">
 				<span className="inline-block bg-clip-text text-transparent">
-					Omegle
+					Flikrr
 				</span>
 				<br />
 				Connect. Anonymously. Exclusively.
 			</h1>
 			<p className="text-lg text-gray-400 max-w-lg mb-8">
-				Join <span className="font-semibold">Omegle</span>, the
+				Join <span className="font-semibold">Flikrr</span>, the
 				invite-only platform for private video conversations.
 			</p>
 			<Button

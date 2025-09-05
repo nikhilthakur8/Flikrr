@@ -46,7 +46,7 @@ const emailConfig = async (from, to, subject, body, bodyType) => {
 const sendCustomEmail = async (to, subject, body) => {
 	try {
 		await emailConfig(
-			"Omegle <no-reply@nextleet.com>",
+			"Flikrr <no-reply@nextleet.com>",
 			to,
 			subject,
 			body,
