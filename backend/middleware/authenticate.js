@@ -15,4 +15,22 @@ function authenticate(req, res, next) {
 	}
 }
 
-module.exports = { authenticate };
+function checkInvite(req, res, next) {
+	try {
+		if (!req.user) return res.status(401).json({ message: "Unauthorized" });
+
+		const isVerified = req.user.isVerified;
+		if (!isVerified)
+			return res.status(403).json({ message: "Email Not Verified" });
+
+		const isInvited = req.user.isInvited;
+		if (!isInvited)
+			return res.status(403).json({ message: "No Invite Available" });
+
+		next();
+	} catch (error) {
+		next(error);
+	}
+}
+
+module.exports = { authenticate, checkInvite };

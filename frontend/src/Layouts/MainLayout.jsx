@@ -11,7 +11,7 @@ export const MainLayout = () => {
 	const location = useLocation();
 
 	// Paths where NavBar should NOT be shown
-	const hideNavBarOn = ["/anonymous-call"];
+	const hideNavBarOn = ["/anonymous-call", "/waitlist", "/verify-email"];
 
 	const shouldHideNavBar = hideNavBarOn.includes(location.pathname);
 	const [loading, setLoading] = useState(true);

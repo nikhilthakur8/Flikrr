@@ -7,8 +7,8 @@ import {
 	createRoutesFromElements,
 } from "react-router-dom";
 import { Toaster } from "./components/ui/sonner.jsx";
-import { Login } from "./components/Login/Login.jsx";
-import { Register } from "./components/Login/Register.jsx";
+import { Login } from "./components/Auth/Login.jsx";
+import { Register } from "./components/Auth/Register.jsx";
 import { AuthLayout } from "./Layouts/AuthLayout.jsx";
 import { MainLayout } from "./Layouts/MainLayout.jsx";
 import { VideoChat } from "./components/VideoChat/VideoChat.jsx";
@@ -16,18 +16,25 @@ import { Home } from "./components/Home/Home.jsx";
 import { UserProvider } from "./Context/UserProvider.jsx";
 import { Profile } from "./components/Profile/Profile.jsx";
 import { ProtectedLayout } from "./Layouts/ProtectedLayout.jsx";
+import { WaitList } from "./components/Auth/WaitList.jsx";
+import { VerifyEmail } from "./components/Auth/VerifyEmail.jsx";
+import { InviteOnlyLayout } from "./Layouts/InviteOnlyLayout.jsx";
 const router = createBrowserRouter(
 	createRoutesFromElements(
 		<Route>
-			<Route path="/" element={<AuthLayout />}>
-				<Route path="/login" element={<Login />} />
-				<Route path="/register" element={<Register />} />
+			<Route element={<AuthLayout />}>
+				<Route path="login" element={<Login />} />
+				<Route path="register" element={<Register />} />
 			</Route>
-			<Route path="/" element={<MainLayout />}>
+			<Route element={<MainLayout />}>
 				<Route index element={<Home />} />
-				<Route path="/" element={<ProtectedLayout />}>
-					<Route path="/anonymous-call" element={<VideoChat />} />
-					<Route path="/profile" element={<Profile />} />
+				<Route element={<ProtectedLayout />}>
+					<Route element={<InviteOnlyLayout />}>
+						<Route path="anonymous-call" element={<VideoChat />} />
+					</Route>
+					<Route path="waitlist" element={<WaitList />} />
+					<Route path="verify-email" element={<VerifyEmail />} />
+					<Route path="profile" element={<Profile />} />
 				</Route>
 			</Route>
 		</Route>

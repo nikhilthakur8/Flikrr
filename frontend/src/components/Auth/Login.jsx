@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { use, useState } from "react";
 import { useForm } from "react-hook-form";
 import {
 	Card,
@@ -14,7 +14,8 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import api from "../../api/api";
 import { toast } from "sonner";
 import { useUserContext } from "../../Context/context";
-export const Register = () => {
+
+export const Login = () => {
 	const {
 		register,
 		handleSubmit,
@@ -22,60 +23,48 @@ export const Register = () => {
 		reset,
 	} = useForm();
 	const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+	const { setUser } = useUserContext();
 	const [searchParams] = useSearchParams();
 	const redirectUri = searchParams.get("redirect_uri") || "/";
 	const navigate = useNavigate();
-	const { setUser } = useUserContext();
 	const onSubmit = async (data) => {
 		try {
-			const response = await api.post("/auth/register", data);
+			const response = await api.post("/auth/login", data);
+			toast.success(response.data.message || "Login successful");
 			setUser(response.data.user);
-			toast.success(response.data.message || "Registration successful");
-			navigate(redirectUri);
+			const isVerified = response.data.user.isVerified;
+			const isInvited = response.data.user.isInvited;
+			if (!isVerified) navigate("/verify-email");
+			else if (!isInvited) navigate("/waitlist");
+			else navigate(redirectUri);
 			reset();
 		} catch (error) {
-			toast.error(error.response?.data?.message || "Registration failed");
+			toast.error(error?.response?.data?.message || "Login failed");
 		}
 	};
 
 	return (
 		<div className="min-h-svh bg-black flex items-center justify-center">
-			<Card className="w-md shadow-xl border rounded-none border-gray-700/50 backdrop-blur">
+			<Card className="w-md shadow-xl border border-neutral-700 rounded-none backdrop-blur">
 				<CardHeader>
 					<CardTitle className="text-2xl text-center text-white font-semibold">
-						Welcome to Omegle
+						Welcome Back
 					</CardTitle>
 					<CardDescription className="text-center text-sm text-zinc-400">
 						Join the platform to connect with others
 					</CardDescription>
 				</CardHeader>
+
 				<form onSubmit={handleSubmit(onSubmit)}>
 					<CardContent className="space-y-5">
 						<Input
-							label="Name"
-							placeholder="John Cena"
-							className="text-base"
-							{...register("name", {
-								required: "Name is required",
-								minLength: {
-									value: 2,
-									message:
-										"Name must be at least 2 characters long",
-								},
-							})}
-							errors={errors.name}
-							disabled={isSubmitting}
-						/>
-
-						<Input
 							label="Email"
 							placeholder="johncena@wwe.com"
-							type="email"
 							className="text-base"
 							{...register("email", {
 								required: "Email is required",
 								pattern: {
-									value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+									value: /^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/,
 									message: "Invalid email address",
 								},
 							})}
@@ -91,11 +80,11 @@ export const Register = () => {
 								isPasswordVisible,
 								setIsPasswordVisible,
 							}}
+							disabled={isSubmitting}
 							className="text-base"
 							{...register("password", {
 								required: "Password is required",
 							})}
-							disabled={isSubmitting}
 							errors={errors.password}
 						/>
 					</CardContent>
@@ -106,7 +95,7 @@ export const Register = () => {
 							disabled={isSubmitting}
 							className="w-full border-none hover:bg-neutral-400 bg-neutral-300 !text-neutral-900 text-lg"
 						>
-							{isSubmitting ? "Registering..." : "Register"}
+							{isSubmitting ? "Logging in..." : "Login"}
 						</Button>
 
 						<div className="text-center text-sm text-gray-400">
@@ -129,12 +118,12 @@ export const Register = () => {
 						</Button>
 
 						<p className="text-sm text-gray-400 text-center">
-							Already have an account?{" "}
+							Don't have an account?{" "}
 							<Link
-								to="/login"
+								to="/register"
 								className="text-blue-400 hover:underline"
 							>
-								Login
+								Register
 							</Link>
 						</p>
 					</CardFooter>

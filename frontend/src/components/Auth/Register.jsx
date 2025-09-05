@@ -1,4 +1,4 @@
-import React, { use, useState } from "react";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import {
 	Card,
@@ -10,12 +10,16 @@ import {
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import {
+	Link,
+	useLocation,
+	useNavigate,
+	useSearchParams,
+} from "react-router-dom";
 import api from "../../api/api";
 import { toast } from "sonner";
 import { useUserContext } from "../../Context/context";
-
-export const Login = () => {
+export const Register = () => {
 	const {
 		register,
 		handleSubmit,
@@ -23,44 +27,60 @@ export const Login = () => {
 		reset,
 	} = useForm();
 	const [isPasswordVisible, setIsPasswordVisible] = useState(false);
-	const { setUser } = useUserContext();
 	const [searchParams] = useSearchParams();
 	const redirectUri = searchParams.get("redirect_uri") || "/";
+	const { setUser } = useUserContext();
 	const navigate = useNavigate();
 	const onSubmit = async (data) => {
 		try {
-			const response = await api.post("/auth/login", data);
-			toast.success(response.data.message || "Login successful");
+			const response = await api.post("/auth/register", data);
+			toast.success(response.data.message || "Registration successful");
 			setUser(response.data.user);
-			navigate(redirectUri);
+			navigate("/verify-email", { replace: true });
 			reset();
 		} catch (error) {
-			toast.error(error?.response?.data?.message || "Login failed");
+			toast.error(error.response?.data?.message || "Registration failed");
 		}
 	};
 
 	return (
 		<div className="min-h-svh bg-black flex items-center justify-center">
-			<Card className="w-md shadow-xl border border-gray-700/50 rounded-none backdrop-blur">
+			<Card className="w-md shadow-xl border rounded-none border-neutral-700 backdrop-blur">
 				<CardHeader>
 					<CardTitle className="text-2xl text-center text-white font-semibold">
-						Welcome Back
+						Welcome to Omegle
 					</CardTitle>
 					<CardDescription className="text-center text-sm text-zinc-400">
 						Join the platform to connect with others
 					</CardDescription>
 				</CardHeader>
-
 				<form onSubmit={handleSubmit(onSubmit)}>
 					<CardContent className="space-y-5">
 						<Input
+							label="Name"
+							placeholder="John Cena"
+							className="text-base"
+							{...register("name", {
+								required: "Name is required",
+								minLength: {
+									value: 2,
+									message:
+										"Name must be at least 2 characters long",
+								},
+							})}
+							errors={errors.name}
+							disabled={isSubmitting}
+						/>
+
+						<Input
 							label="Email"
 							placeholder="johncena@wwe.com"
+							type="email"
 							className="text-base"
 							{...register("email", {
 								required: "Email is required",
 								pattern: {
-									value: /^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/,
+									value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
 									message: "Invalid email address",
 								},
 							})}
@@ -76,11 +96,11 @@ export const Login = () => {
 								isPasswordVisible,
 								setIsPasswordVisible,
 							}}
-							disabled={isSubmitting}
 							className="text-base"
 							{...register("password", {
 								required: "Password is required",
 							})}
+							disabled={isSubmitting}
 							errors={errors.password}
 						/>
 					</CardContent>
@@ -91,7 +111,7 @@ export const Login = () => {
 							disabled={isSubmitting}
 							className="w-full border-none hover:bg-neutral-400 bg-neutral-300 !text-neutral-900 text-lg"
 						>
-							{isSubmitting ? "Logging in..." : "Login"}
+							{isSubmitting ? "Registering..." : "Register"}
 						</Button>
 
 						<div className="text-center text-sm text-gray-400">
@@ -114,12 +134,12 @@ export const Login = () => {
 						</Button>
 
 						<p className="text-sm text-gray-400 text-center">
-							Don't have an account?{" "}
+							Already have an account?{" "}
 							<Link
-								to="/register"
+								to="/login"
 								className="text-blue-400 hover:underline"
 							>
-								Register
+								Login
 							</Link>
 						</p>
 					</CardFooter>
