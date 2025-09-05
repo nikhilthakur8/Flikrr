@@ -22,7 +22,9 @@ app.use(
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
+app.get("/", (req, res) => {
+	res.send("Chal Rha hu Bhai");
+});
 app.use("/api", authenticate, require("./routes/static"));
 app.use("/auth", require("./routes/auth"));
 app.use("/user", authenticate, require("./routes/user"));
