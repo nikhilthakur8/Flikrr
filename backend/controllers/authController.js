@@ -38,12 +38,9 @@ const handleLogin = async (req, res, next) => {
 			httpOnly: true,
 			sameSite: "none",
 			secure: true,
-			domain:
-				process.env.NODE_ENV === "development"
-					? "localhost"
-					: ".flikrr.vercel.app",
-			maxAge: 1 * 24 * 60 * 60 * 1000,
+			maxAge: 24 * 60 * 60 * 1000,
 		});
+
 		return res.json({ message: "Login successful", token, user: safeUser });
 	} catch (err) {
 		next(err);
@@ -82,12 +79,9 @@ const handleRegister = async (req, res, next) => {
 			httpOnly: true,
 			sameSite: "none",
 			secure: true,
-			domain:
-				process.env.NODE_ENV === "development"
-					? "localhost"
-					: "flikrr.vercel.app",
-			maxAge: 1 * 24 * 60 * 60 * 1000,
+			maxAge: 24 * 60 * 60 * 1000,
 		});
+
 		return res.status(201).json({
 			message: "User registered successfully",
 			token,
