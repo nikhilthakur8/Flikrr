@@ -36,8 +36,13 @@ const handleLogin = async (req, res, next) => {
 		const { password: _, ...safeUser } = user;
 		res.cookie("token", token, {
 			httpOnly: true,
-			sameSite: "None",
+			sameSite: "none",
 			secure: true,
+			domain:
+				process.env.NODE_ENV === "development"
+					? "localhost"
+					: ".flikrr.vercel.app",
+			maxAge: 1 * 24 * 60 * 60 * 1000,
 		});
 		return res.json({ message: "Login successful", token, user: safeUser });
 	} catch (err) {
@@ -75,8 +80,13 @@ const handleRegister = async (req, res, next) => {
 		const { password: _, ...safeUser } = newUser;
 		res.cookie("token", token, {
 			httpOnly: true,
-			sameSite: "None",
+			sameSite: "none",
 			secure: true,
+			domain:
+				process.env.NODE_ENV === "development"
+					? "localhost"
+					: "flikrr.vercel.app",
+			maxAge: 1 * 24 * 60 * 60 * 1000,
 		});
 		return res.status(201).json({
 			message: "User registered successfully",

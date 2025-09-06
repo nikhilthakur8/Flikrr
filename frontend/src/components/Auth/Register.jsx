@@ -44,7 +44,7 @@ export const Register = () => {
 	};
 
 	return (
-		<div className="min-h-svh bg-black flex items-center justify-center">
+		<div className="min-h-svh px-5 bg-black flex items-center justify-center">
 			<Card className="w-md shadow-xl border rounded-none border-neutral-700 backdrop-blur">
 				<CardHeader>
 					<CardTitle className="text-2xl text-center text-white font-semibold">

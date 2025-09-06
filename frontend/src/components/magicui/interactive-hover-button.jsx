@@ -8,7 +8,7 @@ export const InteractiveHoverButton = React.forwardRef(
 			<button
 				ref={ref}
 				className={cn(
-					"group relative w-auto cursor-pointer overflow-hidden  border bg-background py-1 px-5 text-center font-semibold",
+					"group relative w-auto cursor-pointer overflow-hidden  border bg-background py-0.5 px-4 text-center font-semibold",
 					className
 				)}
 				{...props}
@@ -18,7 +18,7 @@ export const InteractiveHoverButton = React.forwardRef(
 						{children}
 					</span>
 				</div>
-				<div className="absolute top-0 z-10 flex h-full w-full translate-x-12 items-center justify-center gap-2 text-white bg-black opacity-0 transition-all duration-300 group-hover:-translate-x-5 group-hover:opacity-100">
+				<div className="absolute top-0 z-10 flex h-full w-full translate-x-12 items-center justify-center gap-2 text-white bg-black opacity-0 transition-all duration-300 group-hover:-translate-x-4 group-hover:opacity-100">
 					<span>{children}</span>
 					<ArrowRight className="w-4 h-4" />
 				</div>

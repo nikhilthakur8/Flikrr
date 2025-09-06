@@ -110,10 +110,6 @@ export const NavBar = () => {
 							</a>
 						);
 					})}
-					<Button>
-						<LogIn className="w-4 h-4" />
-						<span>Login</span>
-					</Button>
 				</div>
 			)}
 		</nav>

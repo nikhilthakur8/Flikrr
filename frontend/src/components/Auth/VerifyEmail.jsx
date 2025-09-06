@@ -108,7 +108,7 @@ export const VerifyEmail = () => {
 	};
 
 	return (
-		<div className="min-h-screen bg-neutral-950 flex items-center justify-center px-4">
+		<div className="min-h-screen bg-neutral-950 flex items-center justify-center px-5">
 			<Card className="max-w-md w-full bg-neutral-900 border border-neutral-700 shadow-none rounded-none">
 				<CardHeader className="text-center">
 					<CardTitle className="text-2xl text-white font-bold mb-2">
