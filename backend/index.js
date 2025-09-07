@@ -10,10 +10,7 @@ const server = http.createServer(app);
 
 app.use(
 	cors({
-		origin:
-			process.env.NODE_ENV === "development"
-				? "http://localhost:5173"
-				: "https://flikrr.vercel.app",
+		origin: process.env.FRONTEND_URL,
 		credentials: true,
 	})
 );
