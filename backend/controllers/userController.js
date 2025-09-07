@@ -39,7 +39,7 @@ async function handleCreateInviteCode(req, res, next) {
 				.status(403)
 				.json({ message: "Only admin can create invite codes" });
 		}
-		const { id: userId } = req.user;	
+		const { id: userId } = req.user;
 
 		const { email } = req.body;
 		const existingCode = await prisma.inviteCode.findFirst({
@@ -93,52 +93,54 @@ async function handleRegisterInviteCode(req, res, next) {
 
 		const maxUsage = 5;
 
-		const inviterCode = await prisma.inviteCode.findUnique({
-			where: { code: inviteCode },
-		});
+		const updatedUser = await prisma.$transaction(async (tx) => {
+			const inviterCode = await tx.inviteCode.findUnique({
+				where: { code: inviteCode },
+			});
 
-		if (!inviterCode || inviterCode.usedCount >= maxUsage) {
-			return res
-				.status(400)
-				.json({ message: "Invalid or expired invite code" });
-		}
+			if (!inviterCode || inviterCode.usedCount >= maxUsage) {
+				throw new Error("Invalid or expired invite code");
+			}
 
-		await prisma.inviteCode.update({
-			where: { code: inviteCode },
-			data: { usedCount: { increment: 1 } },
-		});
+			await tx.inviteCode.update({
+				where: { code: inviteCode },
+				data: { usedCount: { increment: 1 } },
+			});
 
-		await prisma.inviteCode.create({
-			data: {
-				code: generateInviteCode(),
-				user: { connect: { id } },
-				maxUsage: 5,
-				usedCount: 0,
-			},
-		});
+			await tx.inviteCode.create({
+				data: {
+					code: generateInviteCode(),
+					user: { connect: { id } },
+					maxUsage: 5,
+					usedCount: 0,
+				},
+			});
 
-		const updatedUser = await prisma.user.update({
-			where: { email },
-			data: {
-				isInvited: true,
-				invitedBy: inviterCode.userId,
-				
-			},
-			include: {
-				inviteCode: true,
-			},
+			return tx.user.update({
+				where: { email },
+				data: {
+					isInvited: true,
+					invitedBy: inviterCode.userId,
+				},
+				include: {
+					inviteCode: true,
+				},
+			});
 		});
 
 		const { password, ...safeUser } = updatedUser;
+
 		return res.json({
 			message: "Registered with invite code successfully",
 			user: safeUser,
 		});
 	} catch (error) {
+		if (error.message === "Invalid or expired invite code") {
+			return res.status(400).json({ message: error.message });
+		}
 		next(error);
 	}
 }
-
 module.exports = {
 	handleGetProfile,
 	handleCreateInviteCode,
