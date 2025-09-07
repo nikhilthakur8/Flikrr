@@ -34,13 +34,6 @@ const handleLogin = async (req, res, next) => {
 			inviteCode: user.isInvited,
 		});
 		const { password: _, ...safeUser } = user;
-		res.cookie("token", token, {
-			httpOnly: true,
-			sameSite: "none",
-			secure: true,
-			maxAge: 24 * 60 * 60 * 1000,
-		});
-
 		return res.json({ message: "Login successful", token, user: safeUser });
 	} catch (err) {
 		next(err);
@@ -75,12 +68,6 @@ const handleRegister = async (req, res, next) => {
 			inviteCode: newUser.isInvited,
 		});
 		const { password: _, ...safeUser } = newUser;
-		res.cookie("token", token, {
-			httpOnly: true,
-			sameSite: "none",
-			secure: true,
-			maxAge: 24 * 60 * 60 * 1000,
-		});
 
 		return res.status(201).json({
 			message: "User registered successfully",

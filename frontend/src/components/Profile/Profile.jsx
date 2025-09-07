@@ -26,6 +26,7 @@ export const Profile = () => {
 			await api.post("/auth/logout");
 			toast.success("Logged out successfully.");
 			setUser(null);
+			localStorage.removeItem("token");
 			navigate("/");
 		} catch (error) {
 			toast.error("Failed to logout.");

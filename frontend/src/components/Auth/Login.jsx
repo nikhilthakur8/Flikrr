@@ -32,6 +32,7 @@ export const Login = () => {
 			const response = await api.post("/auth/login", data);
 			toast.success(response.data.message || "Login successful");
 			setUser(response.data.user);
+			localStorage.setItem("token", response.data.token);
 			const isVerified = response.data.user.isVerified;
 			const isInvited = response.data.user.isInvited;
 			if (!isVerified) navigate("/verify-email");
