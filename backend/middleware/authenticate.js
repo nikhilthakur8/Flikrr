@@ -7,17 +7,19 @@ async function authenticate(req, res, next) {
 		if (!token) {
 			return res.status(401).json({ message: "Unauthorized" });
 		}
-		const user = verifyToken(token);
-		if (!user) {
-			return res.status(401).json({ message: "Unauthorized" });
+		const payload = verifyToken(token);
+		if (!payload) {
+			return res.status(401).json({ message: "Invalid Token" });
 		}
 
 		const findUser = await prisma.user.findUnique({
-			where: { id: user.id },
+			where: { id: payload.id },
 		});
 
+		if (!findUser) {
+			return res.status(401).json({ error: "User not found" });
+		}
 		req.user = findUser;
-
 		next();
 	} catch (error) {
 		next(error);
