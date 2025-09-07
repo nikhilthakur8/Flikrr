@@ -1,6 +1,7 @@
+const prisma = require("../prismaClient");
 const { verifyToken } = require("../utils/jwt");
 
-function authenticate(req, res, next) {
+async function authenticate(req, res, next) {
 	try {
 		const token = req.headers.authorization?.split(" ")[1];
 		if (!token) {
@@ -11,7 +12,11 @@ function authenticate(req, res, next) {
 			return res.status(401).json({ message: "Unauthorized" });
 		}
 
-		req.user = user;
+		const findUser = await prisma.user.findUnique({
+			where: { id: user.id },
+		});
+
+		req.user = findUser;
 
 		next();
 	} catch (error) {
